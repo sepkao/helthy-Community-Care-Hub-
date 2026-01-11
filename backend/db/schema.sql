@@ -1,0 +1,7 @@
+CREATE TABLE patients (
+    id INTEGER PRIMARY KEY AUTOINCREMENT ,
+    name TEXT NOT NULL,
+    age INTEGER,
+    risk_level TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
