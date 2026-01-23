@@ -12,7 +12,7 @@ export default function HomeLayout({
 
   const isHome = pathname === '/home';
   const isList = pathname.startsWith('/home/list');
-  const isVisits = pathname.startsWith('/home/visits');
+  const isVisits = pathname.startsWith('/home/visit');
   const isUrgent = pathname.startsWith('/home/urgent');
 
   const base =
@@ -49,7 +49,7 @@ export default function HomeLayout({
             </Link>
 
             <Link
-              href="/home/visits"
+              href="/home/visit"
               className={`${base} ${isVisits ? active : inactive}`}
             >
               📝 <span>บันทึกการเยี่ยม</span>
