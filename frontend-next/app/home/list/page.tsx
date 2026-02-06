@@ -13,6 +13,9 @@ type Patient = {
   name: string;
   age: number | null;
   risk_level: 'urgent' | 'watch' | 'normal';
+
+  created_at: string;
+  updated_at?: string;
 };
 
 export default function ListPage() {
@@ -23,11 +26,23 @@ export default function ListPage() {
     age: '',
     risk_level: 'normal',
   });
+  const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState<{
   name?: string;
   age?: string;
+  
   }>({});
-
+  useEffect(() => {
+    // 🔧 mock data (เปลี่ยนเป็นเรียก API ทีหลัง
+    setTimeout(() => {
+      setPatients([
+        { id: 1, name: 'นายสมชาย ใจดี', age: 68, risk_level: 'urgent', created_at: '2026-02-06T09:10:00+07:00' },
+        { id: 2, name: 'นางสาวสุดา สุขใจ', age: 74, risk_level: 'urgent',created_at: '2026-02-06T09:15:00+07:00', },
+        ]);
+        setLoading(false);
+    }, 500);
+    }, []);
+  
   function isFormValid() {
   return (
     form.name.trim() !== '' &&
@@ -35,21 +50,17 @@ export default function ListPage() {
     form.age !== '' &&
     Number(form.age) >= 0
   );
-}
+  }
 
   function validate(form: { name: string; age: string }) {
   const newErrors: any = {};
 
   if (!form.name.trim()) {
     newErrors.name = 'กรุณากรอกชื่อ';
-  } else if (/\d/.test(form.name)) {
-    newErrors.name = 'ชื่อห้ามมีตัวเลข';
   }
 
   if (!form.age) {
     newErrors.age = 'กรุณากรอกอายุ';
-  } else if (Number(form.age) < 0) {
-    newErrors.age = 'อายุต้องมากกว่าหรือเท่ากับ 0';
   }
 
   setErrors(newErrors);
@@ -210,6 +221,7 @@ export default function ListPage() {
             <th className="p-3 text-left">ชื่อ</th>
             <th className="p-3">อายุ</th>
             <th className="p-3">ความเสี่ยง</th>
+            <th className="p-3">วันที่เพิ่ม</th>
             <th className="p-3">จัดการ</th>
           </tr>
         </thead>
@@ -220,7 +232,8 @@ export default function ListPage() {
               <td className="p-3">{p.name}</td>
               <td className="p-3 text-center">{p.age ?? '-'}</td>
               <td className="p-3 text-center">{p.risk_level}</td>
-              <td className="p-3 space-x-2 text-center">
+              <td className="p-3 text-center">{p.created_at}</td>
+              <td className="p-3 space-x-2 text-center">  
                 <button
                   onClick={() => startEdit(p)}
                   className="text-blue-600"

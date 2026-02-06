@@ -45,15 +45,27 @@ function Card({
 ====================== */
 export default function HomePage() {
   const [patients, setPatients] = useState<Patient[]>([]);
-
+  const [currentTime, setCurrentTime] = useState<string>('');
   useEffect(() => {
     getPatients().then(setPatients);
+    const now = new Date();
+
+    const formatted = now.toLocaleString('th-TH', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    
+  });
+
+  setCurrentTime(formatted);
   }, []);
 
   // Dashboard calculation
   const total = patients.length;
   const urgent = patients.filter(p => p.risk_level === 'urgent').length;
   const watch = patients.filter(p => p.risk_level === 'watch').length;
+  
 
   return (
     <>
@@ -62,7 +74,7 @@ export default function HomePage() {
       </h1>
 
       <p className="text-slate-500 mb-6">
-        ยินดีต้อนรับ, Admin User
+        ยินดีต้อนรับ {currentTime} 
       </p>
 
       {/* Dashboard Cards */}
