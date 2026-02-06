@@ -1,111 +1,124 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
-/* ======================
-   Types
-====================== */
-type Visit = {
-  id: number;
-  patient_name: string;
-  visit_date: string; // ISO date
-  note?: string;
-  status: 'done' | 'pending';
-};
-
-/* ======================
-   Visit Page
-====================== */
 export default function VisitPage() {
-  const [visits, setVisits] = useState<Visit[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // 🔧 mock data (เปลี่ยนเป็นเรียก API ทีหลัง)
-    setTimeout(() => {
-      setVisits([
-        {
-          id: 1,
-          patient_name: 'นายสมชาย ใจดี',
-          visit_date: '2026-01-23',
-          status: 'pending',
-        },
-        {
-          id: 2,
-          patient_name: 'นางสาวสุดา สุขใจ',
-          visit_date: '2026-01-23',
-          status: 'done',
-        },
-      ]);
-      setLoading(false);
-    }, 500);
-  }, []);
+  const [urgency, setUrgency] = useState<'green' | 'yellow' | 'red'>('green');
+  const [note, setNote] = useState('');
 
   return (
-    <div>
+    <div className="max-w-4xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">การเยี่ยมวันนี้</h1>
-          <p className="text-slate-500 text-sm">
-            รายการบันทึกการเยี่ยมผู้รับการดูแล
-          </p>
-        </div>
-
-        <button
-          className="px-4 py-2 rounded-lg bg-blue-600 text-white
-                     hover:bg-blue-700 transition"
-        >
-          + เพิ่มการเยี่ยม
-        </button>
+      <div className="flex items-center gap-2 mb-6">
+        <span className="text-xl cursor-pointer">‹</span>
+        <h1 className="text-xl font-bold">บันทึกการเยี่ยมบ้าน</h1>
       </div>
 
-      {/* Content */}
-      {loading ? (
-        <p className="text-slate-500">กำลังโหลดข้อมูล...</p>
-      ) : visits.length === 0 ? (
-        <div className="bg-white p-6 rounded-xl border text-center text-slate-500">
-          ยังไม่มีข้อมูลการเยี่ยมวันนี้
+      {/* Card */}
+      <div className="bg-white rounded-2xl border p-6 space-y-6">
+        {/* Select patient */}
+        <div>
+          <label className="text-sm font-medium">
+            เลือกผู้รับการดูแล
+          </label>
+          <select className="mt-1 w-full border rounded-xl p-3">
+            {/* ต่อ database เอง */}
+            <option>-- เลือกผู้รับการดูแล --</option>
+          </select>
         </div>
-      ) : (
-        <div className="bg-white rounded-xl border overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-100 text-slate-600">
-              <tr>
-                <th className="text-left px-4 py-3">ผู้รับการดูแล</th>
-                <th className="text-left px-4 py-3">วันที่เยี่ยม</th>
-                <th className="text-left px-4 py-3">สถานะ</th>
-                <th className="px-4 py-3 text-right">จัดการ</th>
-              </tr>
-            </thead>
 
-            <tbody>
-              {visits.map((v) => (
-                <tr key={v.id} className="border-t">
-                  <td className="px-4 py-3">{v.patient_name}</td>
-                  <td className="px-4 py-3">{v.visit_date}</td>
-                  <td className="px-4 py-3">
-                    {v.status === 'done' ? (
-                      <span className="text-green-600 font-medium">
-                        ✔ เสร็จแล้ว
-                      </span>
-                    ) : (
-                      <span className="text-yellow-600 font-medium">
-                        ⏳ รอดำเนินการ
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <button className="text-blue-600 hover:underline">
-                      ดูรายละเอียด
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {/* Patient info */}
+        <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-800">
+          โรคประจำตัว: - <br />
+          สถานะเดิม: -
         </div>
-      )}
+
+        {/* Urgency */}
+        <div>
+          <label className="text-sm font-medium block mb-3">
+            ประเมินระดับความเร่งด่วน (หลังการเยี่ยม) <span className="text-red-500">*</span>
+          </label>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Green */}
+            <button
+              type="button"
+              onClick={() => setUrgency('green')}
+              className={`border rounded-xl p-4 text-left transition
+                ${
+                  urgency === 'green'
+                    ? 'border-green-500 bg-green-50'
+                    : 'hover:border-slate-300'
+                }`}
+            >
+              <div className="text-green-600 font-semibold mb-1">
+                ปกติ (เขียว)
+              </div>
+              <p className="text-sm text-slate-600">
+                อาการคงที่ ปลอดภัย
+              </p>
+            </button>
+
+            {/* Yellow */}
+            <button
+              type="button"
+              onClick={() => setUrgency('yellow')}
+              className={`border rounded-xl p-4 text-left transition
+                ${
+                  urgency === 'yellow'
+                    ? 'border-yellow-500 bg-yellow-50'
+                    : 'hover:border-slate-300'
+                }`}
+            >
+              <div className="text-yellow-600 font-semibold mb-1">
+                เฝ้าระวัง (เหลือง)
+              </div>
+              <p className="text-sm text-slate-600">
+                มีอาการผิดปกติเล็กน้อย
+              </p>
+            </button>
+
+            {/* Red */}
+            <button
+              type="button"
+              onClick={() => setUrgency('red')}
+              className={`border rounded-xl p-4 text-left transition
+                ${
+                  urgency === 'red'
+                    ? 'border-red-500 bg-red-50'
+                    : 'hover:border-slate-300'
+                }`}
+            >
+              <div className="text-red-600 font-semibold mb-1">
+                เร่งด่วน (แดง)
+              </div>
+              <p className="text-sm text-slate-600">
+                ต้องการความช่วยเหลือทันที
+              </p>
+            </button>
+          </div>
+        </div>
+
+        {/* Note */}
+        <div>
+          <label className="text-sm font-medium">
+            บันทึกอาการ / รายละเอียดการเยี่ยม
+          </label>
+          <textarea
+            className="mt-1 w-full border rounded-xl p-3 min-h-[120px]"
+            placeholder="ระบุอาการ สัญญาณชีพ การทานยา หรือปัญหาที่พบ..."
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+          />
+        </div>
+
+        {/* Submit */}
+        <button
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold flex items-center justify-center gap-2"
+        >
+          📋 บันทึกข้อมูล
+        </button>
+      </div>
     </div>
   );
 }
