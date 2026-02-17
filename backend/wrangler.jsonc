@@ -3,16 +3,19 @@
 	"name": "backend",
 	"main": "src/index.ts",
 	"compatibility_date": "2026-01-11",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
 	"d1_databases": [
-    {
-      "binding": "carehub_db",
-      "database_name": "carehub_db",
-      "database_id": "6b52c7a1-0720-4cff-9e78-82f0f78841ad"
-    }
-  ]
-	// "compatibility_flags": [
-	//   "nodejs_compat"
-	// ],
+		{
+			"binding": "carehub_db",
+			"database_name": "carehub_db",
+			"database_id": "6b52c7a1-0720-4cff-9e78-82f0f78841ad"
+		}
+	],
+	"vars": {
+		"JWT_SECRET": "carehub-secret-key-change-in-production"
+	}
 	// "vars": {
 	//   "MY_VAR": "my-variable"
 	// },

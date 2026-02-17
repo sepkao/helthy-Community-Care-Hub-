@@ -1,0 +1,14 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="careGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563EB" /> <!-- Blue-600 -->
+      <stop offset="100%" stop-color="#14B8A6" /> <!-- Teal-500 -->
+    </linearGradient>
+  </defs>
+  
+  <!-- Outer Rounded Square/House Shape Base -->
+  <path d="M256 32L448 192V432C448 458.5 426.5 480 400 480H112C85.5 480 64 458.5 64 432V192L256 32Z" fill="url(#careGradient)"/>
+  
+  <!-- Inner Heart (Negative Space) -->
+  <path d="M256 392C256 392 352 304 352 248C352 217.1 326.9 192 296 192C278.5 192 263.2 201.2 256 215.1C248.8 201.2 233.5 192 216 192C185.1 192 160 217.1 160 248C160 304 256 392 256 392Z" fill="white"/>
+</svg>
