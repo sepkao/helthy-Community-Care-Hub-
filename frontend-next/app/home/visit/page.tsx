@@ -1,124 +1,143 @@
 'use client';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
-import { useState } from 'react';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
+/* ======================
+   Types
+====================== */
+type Visit = {
+  id: number;
+  patient_name: string;
+  caregiver_name: string;
+  visit_date: string; // ISO date
+  visited_at: string;
+  note: string;
+};
+
+/* ======================
+   Visit Page
+====================== */
 export default function VisitPage() {
-  const [urgency, setUrgency] = useState<'green' | 'yellow' | 'red'>('green');
-  const [note, setNote] = useState('');
+  const [visits, setVisits] = useState<Visit[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [role, setRole] = useState<string>('');
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const elderlyId = searchParams.get('elderly_id');
+
+  useEffect(() => {
+    const storedRole = localStorage.getItem('role');
+    if (storedRole) setRole(storedRole);
+  }, []);
+
+  const fetchVisits = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      let url = `${API_BASE}/visits`;
+      if (elderlyId) url += `?elderly_id=${elderlyId}`;
+      const res = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setVisits(data.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch visits:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchVisits();
+  }, [elderlyId]);
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('th-TH', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div>
       {/* Header */}
-      <div className="flex items-center gap-2 mb-6">
-        <span className="text-xl cursor-pointer">‹</span>
-        <h1 className="text-xl font-bold">บันทึกการเยี่ยมบ้าน</h1>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold">
+            {elderlyId && visits.length > 0
+              ? `ประวัติการเยี่ยม - ${visits[0].patient_name}`
+              : 'การเยี่ยมวันนี้'}
+          </h1>
+          <p className="text-slate-500 text-sm">
+            {elderlyId ? 'แสดงเฉพาะรายการเยี่ยมของบุคคลนี้' : 'รายการบันทึกการเยี่ยมผู้รับการดูแล'}
+          </p>
+        </div>
+
+        {role !== 'guardian' && (
+          <button onClick={() => router.push('/home/visit/new')}
+            className="px-4 py-2 rounded-lg bg-blue-600 text-white
+                            hover:bg-blue-700 transition shadow-lg"
+          >
+            + เพิ่มการเยี่ยม
+          </button>
+        )}
       </div>
 
-      {/* Card */}
-      <div className="bg-white rounded-2xl border p-6 space-y-6">
-        {/* Select patient */}
-        <div>
-          <label className="text-sm font-medium">
-            เลือกผู้รับการดูแล
-          </label>
-          <select className="mt-1 w-full border rounded-xl p-3">
-            {/* ต่อ database เอง */}
-            <option>-- เลือกผู้รับการดูแล --</option>
-          </select>
-        </div>
-
-        {/* Patient info */}
-        <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-800">
-          โรคประจำตัว: - <br />
-          สถานะเดิม: -
-        </div>
-
-        {/* Urgency */}
-        <div>
-          <label className="text-sm font-medium block mb-3">
-            ประเมินระดับความเร่งด่วน (หลังการเยี่ยม) <span className="text-red-500">*</span>
-          </label>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Green */}
-            <button
-              type="button"
-              onClick={() => setUrgency('green')}
-              className={`border rounded-xl p-4 text-left transition
-                ${
-                  urgency === 'green'
-                    ? 'border-green-500 bg-green-50'
-                    : 'hover:border-slate-300'
-                }`}
-            >
-              <div className="text-green-600 font-semibold mb-1">
-                ปกติ (เขียว)
-              </div>
-              <p className="text-sm text-slate-600">
-                อาการคงที่ ปลอดภัย
-              </p>
-            </button>
-
-            {/* Yellow */}
-            <button
-              type="button"
-              onClick={() => setUrgency('yellow')}
-              className={`border rounded-xl p-4 text-left transition
-                ${
-                  urgency === 'yellow'
-                    ? 'border-yellow-500 bg-yellow-50'
-                    : 'hover:border-slate-300'
-                }`}
-            >
-              <div className="text-yellow-600 font-semibold mb-1">
-                เฝ้าระวัง (เหลือง)
-              </div>
-              <p className="text-sm text-slate-600">
-                มีอาการผิดปกติเล็กน้อย
-              </p>
-            </button>
-
-            {/* Red */}
-            <button
-              type="button"
-              onClick={() => setUrgency('red')}
-              className={`border rounded-xl p-4 text-left transition
-                ${
-                  urgency === 'red'
-                    ? 'border-red-500 bg-red-50'
-                    : 'hover:border-slate-300'
-                }`}
-            >
-              <div className="text-red-600 font-semibold mb-1">
-                เร่งด่วน (แดง)
-              </div>
-              <p className="text-sm text-slate-600">
-                ต้องการความช่วยเหลือทันที
-              </p>
-            </button>
+      {/* Content */}
+      {
+        loading ? (
+          <div className="flex justify-center py-12">
+            <svg className="animate-spin h-8 w-8 text-blue-500" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
           </div>
-        </div>
+        ) : visits.length === 0 ? (
+          <div className="bg-white p-12 rounded-xl border text-center text-slate-500 shadow-sm">
+            <div className="text-4xl mb-3">📝</div>
+            <p>ยังไม่มีข้อมูลการเยี่ยม</p>
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl border overflow-hidden shadow-sm">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 text-slate-600 font-medium">
+                <tr>
+                  <th className="text-left px-6 py-4">ผู้รับการดูแล</th>
+                  <th className="text-left px-6 py-4">วันที่เยี่ยม</th>
+                  <th className="text-left px-6 py-4">รายละเอียด</th>
+                  <th className="text-left px-6 py-4">ผู้บันทึก</th>
+                </tr>
+              </thead>
 
-        {/* Note */}
-        <div>
-          <label className="text-sm font-medium">
-            บันทึกอาการ / รายละเอียดการเยี่ยม
-          </label>
-          <textarea
-            className="mt-1 w-full border rounded-xl p-3 min-h-[120px]"
-            placeholder="ระบุอาการ สัญญาณชีพ การทานยา หรือปัญหาที่พบ..."
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-          />
-        </div>
-
-        {/* Submit */}
-        <button
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold flex items-center justify-center gap-2"
-        >
-          📋 บันทึกข้อมูล
-        </button>
-      </div>
-    </div>
+              <tbody className="divide-y divide-slate-100">
+                {visits.map((v) => (
+                  <tr key={v.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-6 py-4 font-medium text-slate-900">{v.patient_name}</td>
+                    <td className="px-6 py-4 text-slate-500 whitespace-nowrap">
+                      {formatDate(v.visited_at)}
+                    </td>
+                    <td className="px-6 py-4 text-slate-600 max-w-md truncate">
+                      {v.note || '-'}
+                    </td>
+                    <td className="px-6 py-4 text-slate-500">
+                      {v.caregiver_name}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )
+      }
+    </div >
   );
 }

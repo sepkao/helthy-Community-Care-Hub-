@@ -1,8 +1,12 @@
-name = "community-carehub-backend"
+name = "carehub_ndb"
 main = "src/index.ts"
-compatibility_date = "2024-12-01"
+compatibility_date = "2025-01-07"
+compatibility_flags = ["nodejs_compat"]
 
 [[d1_databases]]
-binding = "DB"
+binding = "carehub_db"
 database_name = "carehub_db"
 database_id = "6b52c7a1-0720-4cff-9e78-82f0f78841ad"
+
+[vars]
+JWT_SECRET = "carehub-secret-key-change-in-production"

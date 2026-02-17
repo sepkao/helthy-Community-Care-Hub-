@@ -1,7 +1,9 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
+import { useState, useEffect } from 'react';
 
 export default function HomeLayout({
   children,
@@ -15,73 +17,114 @@ export default function HomeLayout({
   const isVisits = pathname.startsWith('/home/visit');
   const isUrgent = pathname.startsWith('/home/urgent');
 
-  const base =
-    'flex items-center gap-3 px-4 py-2 rounded-lg transition';
+  const navItems = [
+    { href: '/home', label: 'ภาพรวม', icon: '📊', active: isHome },
+    { href: '/home/list', label: 'รายชื่อผู้รับการดูแล', icon: '👥', active: isList },
+    { href: '/home/urgent', label: 'เคสเร่งด่วน', icon: '⚠️', active: isUrgent },
+  ];
 
-  const active =
-    'bg-blue-600 text-white font-semibold';
+  const [user, setUser] = useState<{ email: string; role: string } | null>(null);
 
-  const inactive =
-    'text-slate-600 hover:bg-slate-100';
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const storedRole = localStorage.getItem('role');
+
+    if (token) {
+      try {
+        // Decode JWT payload directly (base64url → JSON)
+        const parts = token.split('.');
+        if (parts.length === 3) {
+          const payload = JSON.parse(atob(parts[1]));
+          const email = payload.email || 'User';
+          const role = payload.role || storedRole || '-';
+          setUser({ email, role });
+          localStorage.setItem('role', role);
+        }
+      } catch {
+        // Fallback to localStorage
+        if (storedRole) setUser({ email: 'User', role: storedRole });
+      }
+    }
+  }, []);
 
   return (
-    <div className="flex h-screen bg-slate-50">
+    <div className="flex h-screen bg-slate-100">
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r p-4 flex flex-col">
-        <div>
-          <h2 className="font-bold text-xl mb-6 flex items-center gap-2">
-            🏥 Care Hub
-          </h2>
-
-          <nav className="space-y-1">
-            <Link
-              href="/home"
-              className={`${base} ${isHome ? active : inactive}`}
-            >
-              📊 <span>ภาพรวม</span>
-            </Link>
-
-            <Link
-              href="/home/list"
-              className={`${base} ${isList ? active : inactive}`}
-            >
-              👥 <span>รายชื่อผู้รับการดูแล</span>
-            </Link>
-
-            <Link
-              href="/home/visit"
-              className={`${base} ${isVisits ? active : inactive}`}
-            >
-              📝 <span>บันทึกการเยี่ยม</span>
-            </Link>
-
-            <Link
-              href="/home/urgent"
-              className={`${base} ${isUrgent ? active : inactive}`}
-            >
-              ⚠️ <span>เคสเร่งด่วน</span>
-            </Link>
-          </nav>
+      <aside className="w-72 bg-gradient-to-b from-blue-600 via-blue-700 to-indigo-800 flex flex-col shadow-2xl">
+        {/* Logo Section */}
+        <div className="p-6 border-b border-white/10">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-lg">
+              <Image src="/logo.svg" alt="Community CareHub Logo" width={40} height={40} className="object-contain" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-white">Care Hub</h1>
+              <p className="text-xs text-white/60">ระบบดูแลผู้สูงอายุ</p>
+            </div>
+          </div>
         </div>
 
-        {/* Footer sidebar (optional) */}
-        <div className="mt-auto pt-4 border-t">
+        {/* Navigation */}
+        <nav className="flex-1 p-4 space-y-2">
+          {navItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`
+                flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200
+                ${item.active
+                  ? 'bg-white text-blue-700 shadow-lg font-semibold'
+                  : 'text-white/80 hover:bg-white/10 hover:text-white'
+                }
+              `}
+            >
+              <span className={`text-xl ${item.active ? '' : 'opacity-80'}`}>
+                {item.icon}
+              </span>
+              <span>{item.label}</span>
+              {item.active && (
+                <span className="ml-auto w-2 h-2 bg-blue-500 rounded-full"></span>
+              )}
+            </Link>
+          ))}
+        </nav>
+
+        {/* User Section & Logout */}
+        <div className="p-4 border-t border-white/10">
+          {/* User Info */}
+          <div className="flex items-center gap-3 px-4 py-3 mb-3 bg-white/10 rounded-xl">
+            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+              <span className="text-lg">👤</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-white truncate">{user?.email || 'Loading...'}</p>
+              <p className="text-xs text-white/60 capitalize">{user?.role || '-'}</p>
+            </div>
+          </div>
+
+          {/* Logout Button */}
           <button
             onClick={() => {
-              localStorage.removeItem('login');
+              localStorage.removeItem('token');
+              localStorage.removeItem('role');
               window.location.href = '/login';
             }}
-            className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg"
+            className="w-full flex items-center gap-3 px-4 py-3 text-white/80 hover:bg-red-500/20 hover:text-red-200 rounded-xl transition-all duration-200"
           >
-            🚪 ออกจากระบบ
+            <span className="text-xl">🚪</span>
+            <span>ออกจากระบบ</span>
           </button>
         </div>
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 p-8 overflow-y-auto">
-        {children}
+      <main className="flex-1 overflow-y-auto">
+        <div className="p-8">
+          {children}
+        </div>
       </main>
     </div>
   );
 }
+
+

@@ -1,46 +1,36 @@
 import { Hono } from 'hono'
-
-type Bindings = {
-  DB: D1Database
-}
+import { cors } from 'hono/cors'
+import auth from './routes/auth'
+import elderly from './routes/elderly'
+import visit from './routes/visit'
+import dashboard from './routes/dashboard'
+import type { Bindings } from './types'
 
 const app = new Hono<{ Bindings: Bindings }>()
+// CORS Middleware - อนุญาตให้ frontend เรียก API ได้
+// เมื่อ frontend (Vercel) กับ backend (Workers) คนละ domain
+// เบราว์เซอร์จะบล็อกถ้าไม่ตั้งค่า CORS
+app.use('/*', cors({
+    origin: (origin) => {
+        // อนุญาต localhost สำหรับ development
+        if (origin.startsWith('http://localhost')) return origin
+        // อนุญาต Vercel deployments
+        if (origin.endsWith('.vercel.app')) return origin
+        // อนุญาต production domain (ถ้ามี)
+        return null
+    },
+    credentials: true,
+    allowHeaders: ['Content-Type', 'Authorization'],
+    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+}))
 
-app.get('/', (c) => {
-  return c.text('CareHub API is running')
-})
+app.get('/', c => c.text('OK'))
 
-/* ✅ READ: ทั้งหมด */
-app.get('/patients', async (c) => {
-  const { results } = await c.env.DB
-    .prepare('SELECT * FROM patients ORDER BY id DESC')
-    .all()
-
-  return c.json(results)
-})
-
-/* ✅ CREATE: เพิ่มผู้ป่วย */
-app.post('/patients', async (c) => {
-  const body = await c.req.json()
-
-  const { name, age, phone, address } = body
-
-  if (!name) {
-    return c.json({ error: 'name is required' }, 400)
-  }
-
-  const result = await c.env.DB
-    .prepare(
-      `INSERT INTO patients (name, age, phone, address)
-       VALUES (?, ?, ?, ?)`
-    )
-    .bind(name, age ?? null, phone ?? null, address ?? null)
-    .run()
-
-  return c.json({
-    success: true,
-    id: result.meta.last_row_id
-  })
-})
+// 🔥 ผูก routes
+app.route('/auth', auth)
+app.route('/elderly', elderly)
+app.route('/visits', visit)
+app.route('/dashboard', dashboard)
 
 export default app
+
