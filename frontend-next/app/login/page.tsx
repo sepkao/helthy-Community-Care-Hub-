@@ -1,42 +1,104 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+
+/* ── Network Background ── */
+function NetworkBackground() {
+  const nodes: [number, number][] = [
+    [80, 120], [260, 60], [480, 200], [640, 80],
+    [380, 380], [160, 320], [560, 360], [720, 260],
+  ]
+  const edges: [number, number][] = [
+    [0,1],[1,2],[2,3],[1,4],[4,5],[2,6],[6,7],[3,7],[5,0],[4,6],
+  ]
+  return (
+    <svg
+      id="network-bg"
+      style={{
+        position: 'fixed', inset: 0, width: '100%', height: '100%',
+        opacity: 0.15, pointerEvents: 'none', zIndex: 0,
+        transition: 'transform 0.4s ease',
+      }}
+      viewBox="0 0 800 500" fill="none"
+    >
+      {edges.map(([a, b], i) => (
+        <line key={i}
+          x1={nodes[a][0]} y1={nodes[a][1]}
+          x2={nodes[b][0]} y2={nodes[b][1]}
+          stroke="#3b82f6" strokeWidth="1"
+        />
+      ))}
+      {nodes.map(([cx, cy], i) => (
+        <circle key={i} cx={cx} cy={cy} r={i === 0 ? 5 : 3} fill="#3b82f6" />
+      ))}
+    </svg>
+  )
+}
+
+/* ── Tilt Card ── */
+function TiltCard({ children }: { children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const onMove = (e: React.MouseEvent) => {
+    const card = ref.current
+    if (!card) return
+    const { left, top, width, height } = card.getBoundingClientRect()
+    const rx = ((e.clientY - top - height / 2) / height) * 8
+    const ry = ((e.clientX - left - width / 2) / width) * -8
+    card.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg)`
+  }
+  const onLeave = () => {
+    if (ref.current) ref.current.style.transform = 'rotateX(0deg) rotateY(0deg)'
+  }
+  return (
+    <div ref={ref} onMouseMove={onMove} onMouseLeave={onLeave}
+      style={{ transformStyle: 'preserve-3d', transition: 'transform 0.2s ease', width: '100%' }}>
+      {children}
+    </div>
+  )
+}
 
 export default function LoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  /* Parallax */
+  useEffect(() => {
+    const move = (e: MouseEvent) => {
+      const x = (e.clientX / window.innerWidth - 0.5) * 16
+      const y = (e.clientY / window.innerHeight - 0.5) * 16
+      const bg = document.getElementById('network-bg')
+      if (bg) bg.style.transform = `translate(${x}px, ${y}px)`
+    }
+    window.addEventListener('mousemove', move)
+    return () => window.removeEventListener('mousemove', move)
+  }, [])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setLoading(true)
-
     try {
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE}/auth/login`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
+          body: JSON.stringify({ email, password }),
         }
       )
-
       const data = await res.json()
-
       if (!res.ok) {
         setError(data.message || 'เข้าสู่ระบบไม่สำเร็จ')
         return
       }
-
-      // เก็บ JWT
       localStorage.setItem('token', data.token)
       localStorage.setItem('role', data.user.role)
-
       router.push('/home')
     } catch {
       setError('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้')
@@ -46,81 +108,268 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 p-4">
-      {/* Glassmorphism Card */}
-      <div className="w-full max-w-md bg-white/90 backdrop-blur-lg rounded-3xl shadow-2xl p-8 space-y-6">
-        {/* Header */}
-        <div className="text-center space-y-2">
-          <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-2xl mx-auto flex items-center justify-center shadow-lg">
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold text-gray-800">เข้าสู่ระบบ</h1>
-          <p className="text-gray-500 text-sm">ยินดีต้อนรับกลับมา</p>
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&family=DM+Serif+Display&display=swap');
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        .login-root {
+          font-family: 'Sarabun', sans-serif;
+          min-height: 100vh;  
+          width: 100%;
+          background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 50%, #ecfeff 100%);
+          display: flex; align-items: center; justify-content: center;
+          padding: 24px; position: relative; overflow: hidden;
+        }
+
+        /* Blobs */
+        .blob {
+          position: fixed; border-radius: 50%; pointer-events: none; z-index: 0;
+        }
+        .blob-1 {
+          width: 500px; height: 500px; top: -120px; left: -120px;
+          background: radial-gradient(circle, rgba(59,130,246,0.13) 0%, transparent 70%);
+        }
+        .blob-2 {
+          width: 400px; height: 400px; bottom: -80px; right: -80px;
+          background: radial-gradient(circle, rgba(6,182,212,0.11) 0%, transparent 70%);
+        }
+
+
+
+        /* Card */
+        .login-card {
+          position: relative; z-index: 10;
+          width: 100%; max-width: 420px;
+          backdrop-filter: blur(24px);
+          background: rgba(255,255,255,0.78);
+          border: 1.5px solid rgba(255,255,255,0.75);
+          border-radius: 28px;
+          padding: 40px 36px 36px;
+          box-shadow: 0 24px 64px rgba(59,130,246,0.13), 0 2px 0 rgba(255,255,255,0.9) inset;
+          animation: fadeUp 0.7s ease both;
+        }
+
+        /* Header */
+        .card-header { text-align: center; margin-bottom: 28px; }
+        .card-icon-wrap {
+          width: 56px; height: 56px; border-radius: 16px; margin: 0 auto 14px;
+          background: linear-gradient(135deg, #3b82f6, #0ea5e9);
+          display: flex; align-items: center; justify-content: center;
+          box-shadow: 0 8px 24px rgba(59,130,246,0.35);
+        }
+        .card-title {
+          font-family: 'DM Serif Display', serif;
+          font-size: 26px; color: #1e293b; letter-spacing: -0.02em;
+        }
+        .card-sub { font-size: 13px; color: #94a3b8; margin-top: 4px; }
+
+        /* Error */
+        .error-box {
+          background: rgba(239,68,68,0.07);
+          border: 1px solid rgba(239,68,68,0.2);
+          border-radius: 12px; padding: 11px 14px;
+          font-size: 13px; color: #dc2626;
+          display: flex; align-items: center; gap: 8px;
+          margin-bottom: 18px;
+          animation: fadeUp 0.3s ease both;
+        }
+
+        /* Field */
+        .field { margin-bottom: 16px; }
+        .field-label {
+          display: block; font-size: 12px; font-weight: 700;
+          color: #64748b; letter-spacing: 0.05em; text-transform: uppercase;
+          margin-bottom: 7px;
+        }
+        .field-wrap { position: relative; }
+        .field-input {
+          width: 100%; padding: 12px 16px;
+          background: rgba(248,250,252,0.8);
+          border: 1.5px solid rgba(226,232,240,0.8);
+          border-radius: 12px; font-family: 'Sarabun', sans-serif;
+          font-size: 14px; color: #1e293b;
+          outline: none; transition: border-color 0.18s, box-shadow 0.18s;
+        }
+        .field-input::placeholder { color: #cbd5e1; }
+        .field-input:focus {
+          border-color: #3b82f6;
+          box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+          background: white;
+        }
+        .field-input.has-toggle { padding-right: 48px; }
+        .toggle-pw {
+          position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+          background: none; border: none; cursor: pointer; color: #94a3b8;
+          padding: 0; display: flex; align-items: center;
+          transition: color 0.15s;
+        }
+        .toggle-pw:hover { color: #3b82f6; }
+
+        /* Submit */
+        .submit-btn {
+          width: 100%; padding: 13px;
+          background: linear-gradient(135deg, #3b82f6, #0ea5e9);
+          color: white; font-family: 'Sarabun', sans-serif;
+          font-size: 15px; font-weight: 700;
+          border: none; border-radius: 14px; cursor: pointer;
+          box-shadow: 0 6px 20px rgba(59,130,246,0.35);
+          transition: transform 0.18s, box-shadow 0.18s, opacity 0.18s;
+          margin-top: 8px;
+          display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .submit-btn:hover:not(:disabled) {
+          transform: translateY(-1px);
+          box-shadow: 0 10px 28px rgba(59,130,246,0.45);
+        }
+        .submit-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+        /* Spinner */
+        .spinner {
+          width: 18px; height: 18px; border-radius: 50%;
+          border: 2.5px solid rgba(255,255,255,0.35);
+          border-top-color: white;
+          animation: spin 0.7s linear infinite;
+        }
+
+        /* Footer */
+        .card-footer {
+          text-align: center; margin-top: 22px;
+          font-size: 13px; color: #94a3b8;
+        }
+        .card-footer a {
+          color: #3b82f6; font-weight: 600; text-decoration: none;
+          transition: color 0.15s;
+        }
+        .card-footer a:hover { color: #1d4ed8; text-decoration: underline; }
+
+        /* Brand strip */
+        .brand-strip {
+          display: flex; align-items: center; justify-content: center;
+          gap: 8px; margin-bottom: 28px;
+          font-family: 'DM Serif Display', serif;
+          font-size: 14px; color: #64748b; letter-spacing: 0.01em;
+        }
+        .brand-dot {
+          width: 6px; height: 6px; border-radius: 50%; background: #3b82f6;
+        }
+
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(18px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes ripple {
+          0%   { width: 60px;  height: 60px;  opacity: 0.5; }
+          100% { width: 800px; height: 800px; opacity: 0; }
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
+
+      <div className="login-root">
+        {/* Layers */}
+        <div className="blob blob-1" />
+        <div className="blob blob-2" />
+        <NetworkBackground />
+        <div className="pulse-wrap">
         </div>
 
-        {/* Alert */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl text-sm flex items-center gap-2">
-            <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-            </svg>
-            {error}
-          </div>
-        )}
+        {/* Card */}
+        <TiltCard>
+          <div className="login-card" style={{ margin: '0 auto' }}>
 
-        {/* Form */}
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">อีเมล</label>
-            <input
-              type="email"
-              placeholder="example@email.com"
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              required
-            />
-          </div>
+            {/* Brand */}
+            <div className="brand-strip">
+              <span className="brand-dot" />
+              Community Care Hub
+              <span className="brand-dot" />
+            </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">รหัสผ่าน</label>
-            <input
-              type="password"
-              placeholder="กรอกรหัสผ่าน"
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              required
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            {/* Header */}
+            <div className="card-header">
+              <div className="card-icon-wrap">
+                <svg width="26" height="26" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                  <circle cx="12" cy="7" r="4"/>
                 </svg>
-                กำลังเข้าสู่ระบบ...
-              </span>
-            ) : 'เข้าสู่ระบบ'}
-          </button>
-        </form>
+              </div>
+              <h1 className="card-title">เข้าสู่ระบบ</h1>
+              <p className="card-sub">ยินดีต้อนรับกลับมา</p>
+            </div>
 
-        {/* Footer */}
-        <p className="text-center text-sm text-gray-500">
-          ยังไม่มีบัญชี?{' '}
-          <Link href="/register" className="text-blue-600 font-medium hover:text-blue-700 hover:underline">
-            สมัครสมาชิก
-          </Link>
-        </p>
+            {/* Error */}
+            {error && (
+              <div className="error-box">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd"/>
+                </svg>
+                {error}
+              </div>
+            )}
+
+            {/* Form */}
+            <form onSubmit={handleLogin}>
+              <div className="field">
+                <label className="field-label">อีเมล</label>
+                <div className="field-wrap">
+                  <input
+                    type="email"
+                    className="field-input"
+                    placeholder="example@email.com"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="field">
+                <label className="field-label">รหัสผ่าน</label>
+                <div className="field-wrap">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    className="field-input has-toggle"
+                    placeholder="กรอกรหัสผ่าน"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="toggle-pw"
+                    onClick={() => setShowPassword(p => !p)}
+                    aria-label="toggle password"
+                  >
+                    {showPassword ? (
+                      <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                        <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                        <line x1="1" y1="1" x2="23" y2="23"/>
+                      </svg>
+                    ) : (
+                      <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <button type="submit" className="submit-btn" disabled={loading}>
+                {loading ? (
+                  <><div className="spinner" /> กำลังเข้าสู่ระบบ...</>
+                ) : 'เข้าสู่ระบบ →'}
+              </button>
+            </form>
+
+            <p className="card-footer">
+              ยังไม่มีบัญชี?{' '}
+              <Link href="/register">สมัครสมาชิก</Link>
+            </p>
+          </div>
+        </TiltCard>
       </div>
-    </div>
+    </>
   )
 }
