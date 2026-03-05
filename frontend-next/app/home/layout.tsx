@@ -1,130 +1,213 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 
-export default function HomeLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function HomeLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [user, setUser] = useState<{ email: string; role: string } | null>(null);
 
-  const isHome = pathname === '/home';
-  const isList = pathname.startsWith('/home/list');
+  const isHome   = pathname === '/home';
+  const isList   = pathname.startsWith('/home/list');
   const isVisits = pathname.startsWith('/home/visit');
   const isUrgent = pathname.startsWith('/home/urgent');
-
-  const navItems = [
-    { href: '/home', label: 'ภาพรวม', icon: '📊', active: isHome },
-    { href: '/home/list', label: 'รายชื่อผู้รับการดูแล', icon: '👥', active: isList },
-    { href: '/home/urgent', label: 'เคสเร่งด่วน', icon: '⚠️', active: isUrgent },
-  ];
-
-  const [user, setUser] = useState<{ email: string; role: string } | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     const storedRole = localStorage.getItem('role');
-
     if (token) {
       try {
-        // Decode JWT payload directly (base64url → JSON)
         const parts = token.split('.');
         if (parts.length === 3) {
           const payload = JSON.parse(atob(parts[1]));
           const email = payload.email || 'User';
-          const role = payload.role || storedRole || '-';
+          const role  = payload.role || storedRole || '-';
           setUser({ email, role });
           localStorage.setItem('role', role);
         }
       } catch {
-        // Fallback to localStorage
         if (storedRole) setUser({ email: 'User', role: storedRole });
       }
     }
   }, []);
 
+  const roleLabel: Record<string, string> = {
+    admin: 'ผู้ดูแลระบบ', caregiver: 'เจ้าหน้าที่ดูแล', guardian: 'ผู้ปกครอง',
+  };
+
+  const navItems = [
+    { href: '/home',        label: 'ภาพรวม',               icon: '📊', active: isHome   },
+    { href: '/home/list',   label: 'รายชื่อผู้รับการดูแล',  icon: '👥', active: isList   },
+    { href: '/home/urgent', label: 'เคสเร่งด่วน',           icon: '⚠️', active: isUrgent },
+    ...(user?.role !== 'guardian' ? [
+      { href: '/home/visit',     label: 'การเยี่ยม',        icon: '📅', active: isVisits },
+      { href: '/home/visit/new', label: 'บันทึกการเยี่ยม',  icon: '📝', active: false    },
+    ] : []),
+  ];
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('role');
+    router.push('/login');
+  };
+
+  const css = `
+    @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&family=DM+Serif+Display&display=swap');
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; font-family: 'Sarabun', sans-serif; }
+
+    .layout {
+      display: flex; height: 100vh;
+      background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 50%, #ecfeff 100%);
+      overflow: hidden; position: relative;
+    }
+
+    /* bg blobs */
+    .blob { position: fixed; border-radius: 50%; pointer-events: none; z-index: 0; }
+    .b1 { width: 500px; height: 500px; top: -140px; right: -100px;
+          background: radial-gradient(circle, rgba(59,130,246,0.10) 0%, transparent 70%); }
+    .b2 { width: 400px; height: 400px; bottom: -80px; left: 160px;
+          background: radial-gradient(circle, rgba(6,182,212,0.08) 0%, transparent 70%); }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      width: 240px; flex-shrink: 0; height: 100vh;
+      position: relative; z-index: 40;
+      backdrop-filter: blur(24px);
+      background: rgba(255,255,255,0.80);
+      border-right: 1.5px solid rgba(255,255,255,0.65);
+      box-shadow: 4px 0 28px rgba(59,130,246,0.08);
+      display: flex; flex-direction: column;
+    }
+
+    .sb-logo {
+      padding: 22px 20px 18px;
+      border-bottom: 1px solid rgba(226,232,240,0.7);
+      display: flex; align-items: center; gap: 12px;
+    }
+    .sb-icon {
+      width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
+      background: linear-gradient(135deg, #3b82f6, #0ea5e9);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; box-shadow: 0 6px 16px rgba(59,130,246,0.28);
+    }
+    .sb-title { font-family: 'DM Serif Display', serif; font-size: 16px; color: #1e293b; }
+    .sb-sub   { font-size: 11px; color: #94a3b8; margin-top: 1px; }
+
+    .nav { flex: 1; padding: 14px 12px; display: flex; flex-direction: column; gap: 3px; overflow-y: auto; }
+    .nav-sec {
+      font-size: 10px; font-weight: 700; color: #cbd5e1;
+      letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 8px 5px;
+    }
+    .ni {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px; border-radius: 12px;
+      font-size: 13px; font-weight: 500; color: #64748b;
+      text-decoration: none; transition: all 0.15s;
+    }
+    .ni:hover { background: rgba(59,130,246,0.07); color: #3b82f6; }
+    .ni.on    { background: rgba(59,130,246,0.10); color: #2563eb; font-weight: 700; }
+    .ni-ic {
+      width: 32px; height: 32px; border-radius: 9px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; background: rgba(241,245,249,0.9);
+      transition: background 0.15s;
+    }
+    .ni:hover .ni-ic { background: rgba(59,130,246,0.10); }
+    .ni.on    .ni-ic  { background: rgba(59,130,246,0.14); }
+    .ni-dot {
+      margin-left: auto; width: 7px; height: 7px; border-radius: 50%;
+      background: #3b82f6; flex-shrink: 0;
+    }
+
+    .sb-foot { padding: 14px; border-top: 1px solid rgba(226,232,240,0.7); }
+    .uc {
+      background: rgba(248,250,252,0.9); border: 1px solid rgba(226,232,240,0.7);
+      border-radius: 14px; padding: 11px 12px;
+      display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+    }
+    .ua {
+      width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+      background: linear-gradient(135deg, #3b82f6, #0ea5e9);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 700; color: white;
+    }
+    .ue { font-size: 12px; color: #1e293b; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ur { font-size: 11px; color: #94a3b8; margin-top: 1px; }
+    .lout {
+      width: 100%; padding: 9px 12px; border-radius: 11px; cursor: pointer;
+      background: rgba(239,68,68,0.07); border: 1px solid rgba(239,68,68,0.15);
+      color: #dc2626; font-family: 'Sarabun', sans-serif;
+      font-size: 13px; font-weight: 600;
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+      transition: background 0.15s;
+    }
+    .lout:hover { background: rgba(239,68,68,0.13); }
+
+    /* ── MAIN ── */
+    .main-wrap {
+      flex: 1; overflow-y: auto;
+      position: relative; z-index: 1;
+    }
+    .main-inner { padding: 32px 36px; }
+  `;
+
   return (
-    <div className="flex h-screen bg-slate-100">
-      {/* Sidebar */}
-      <aside className="w-72 bg-gradient-to-b from-blue-600 via-blue-700 to-indigo-800 flex flex-col shadow-2xl">
-        {/* Logo Section */}
-        <div className="p-6 border-b border-white/10">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-lg">
-              <Image src="/logo.svg" alt="Community CareHub Logo" width={40} height={40} className="object-contain" />
-            </div>
+    <>
+      <style>{css}</style>
+      <div className="blob b1" />
+      <div className="blob b2" />
+
+      <div className="layout">
+        {/* SIDEBAR */}
+        <aside className="sidebar">
+          <div className="sb-logo">
+            <div className="sb-icon">🏥</div>
             <div>
-              <h1 className="text-xl font-bold text-white">Care Hub</h1>
-              <p className="text-xs text-white/60">ระบบดูแลผู้สูงอายุ</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-2">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`
-                flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200
-                ${item.active
-                  ? 'bg-white text-blue-700 shadow-lg font-semibold'
-                  : 'text-white/80 hover:bg-white/10 hover:text-white'
-                }
-              `}
-            >
-              <span className={`text-xl ${item.active ? '' : 'opacity-80'}`}>
-                {item.icon}
-              </span>
-              <span>{item.label}</span>
-              {item.active && (
-                <span className="ml-auto w-2 h-2 bg-blue-500 rounded-full"></span>
-              )}
-            </Link>
-          ))}
-        </nav>
-
-        {/* User Section & Logout */}
-        <div className="p-4 border-t border-white/10">
-          {/* User Info */}
-          <div className="flex items-center gap-3 px-4 py-3 mb-3 bg-white/10 rounded-xl">
-            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-              <span className="text-lg">👤</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">{user?.email || 'Loading...'}</p>
-              <p className="text-xs text-white/60 capitalize">{user?.role || '-'}</p>
+              <div className="sb-title">Care Hub</div>
+              <div className="sb-sub">ระบบดูแลผู้สูงอายุ</div>
             </div>
           </div>
 
-          {/* Logout Button */}
-          <button
-            onClick={() => {
-              localStorage.removeItem('token');
-              localStorage.removeItem('role');
-              window.location.href = '/login';
-            }}
-            className="w-full flex items-center gap-3 px-4 py-3 text-white/80 hover:bg-red-500/20 hover:text-red-200 rounded-xl transition-all duration-200"
-          >
-            <span className="text-xl">🚪</span>
-            <span>ออกจากระบบ</span>
-          </button>
-        </div>
-      </aside>
+          <nav className="nav">
+            <div className="nav-sec">เมนูหลัก</div>
+            {navItems.map(item => (
+              <Link key={item.href + item.label} href={item.href} className={`ni${item.active ? ' on' : ''}`}>
+                <span className="ni-ic">{item.icon}</span>
+                {item.label}
+                {item.active && <span className="ni-dot" />}
+              </Link>
+            ))}
+          </nav>
 
-      {/* Main content */}
-      <main className="flex-1 overflow-y-auto">
-        <div className="p-8">
-          {children}
+          <div className="sb-foot">
+            <div className="uc">
+              <div className="ua">{user?.email ? user.email[0].toUpperCase() : 'U'}</div>
+              <div style={{minWidth: 0}}>
+                <div className="ue">{user?.email || 'ผู้ใช้งาน'}</div>
+                <div className="ur">{roleLabel[user?.role || ''] || user?.role || '-'}</div>
+              </div>
+            </div>
+            <button className="lout" onClick={handleLogout}>
+              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+              ออกจากระบบ
+            </button>
+          </div>
+        </aside>
+
+        {/* MAIN CONTENT — children จาก page.tsx */}
+        <div className="main-wrap">
+          <div className="main-inner">
+            {children}
+          </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </>
   );
 }
-
-
