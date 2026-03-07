@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import Link from 'next/link'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE
@@ -27,11 +27,11 @@ interface ElderlyDetail {
 
 export default function ElderlyDetailPage() {
     const params = useParams()
-    const router = useRouter()
     const [elderly, setElderly] = useState<ElderlyDetail | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
     const [role, setRole] = useState<string>('')
+    const [activeTab, setActiveTab] = useState<'health' | 'visits'>('health')
 
     useEffect(() => {
         const storedRole = localStorage.getItem('role')
@@ -42,177 +42,406 @@ export default function ElderlyDetailPage() {
         const fetchDetail = async () => {
             try {
                 const res = await fetch(`${API_BASE}/elderly/${params.id}`, {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    }
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
                 })
                 const data = await res.json()
-
-                if (data.success) {
-                    setElderly(data.data)
-                } else {
-                    setError(data.message || 'ไม่พบข้อมูล')
-                }
+                if (data.success) setElderly(data.data)
+                else setError(data.message || 'ไม่พบข้อมูล')
             } catch {
                 setError('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้')
             } finally {
                 setLoading(false)
             }
         }
-
-        if (params.id) {
-            fetchDetail()
-        }
+        if (params.id) fetchDetail()
     }, [params.id])
 
-    // Helper: Risk Badge Color
+    const riskConfig: Record<string, { label: string; dot: string; bg: string; text: string; border: string }> = {
+        low: { label: 'เสี่ยงต่ำ', dot: '#10b981', bg: '#ecfdf5', text: '#065f46', border: '#a7f3d0' },
+        medium: { label: 'ปานกลาง', dot: '#f59e0b', bg: '#fffbeb', text: '#92400e', border: '#fde68a' },
+        high: { label: 'สูง', dot: '#f97316', bg: '#fff7ed', text: '#9a3412', border: '#fed7aa' },
+        critical: { label: 'วิกฤต', dot: '#ef4444', bg: '#fef2f2', text: '#991b1b', border: '#fecaca' },
+    }
+
     const getRiskBadge = (level: string) => {
-        switch (level) {
-            case 'low': return <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">🟢 เสี่ยงต่ำ (Low)</span>
-            case 'medium': return <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium">🟡 เสี่ยงปานกลาง (Medium)</span>
-            case 'high': return <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-medium">🟠 เสี่ยงสูง (High)</span>
-            case 'critical': return <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium">🔴 วิกฤต (Critical)</span>
-            default: return <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">ไม่ระบุ</span>
+        const cfg = riskConfig[level]
+        if (!cfg) return (
+            <span style={{ background: '#f1f5f9', color: '#64748b', border: '1px solid #e2e8f0', padding: '4px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                ไม่ระบุ
+            </span>
+        )
+        return (
+            <span style={{ background: cfg.bg, color: cfg.text, border: `1px solid ${cfg.border}`, padding: '4px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: cfg.dot, flexShrink: 0, display: 'inline-block' }} />
+                {cfg.label}
+            </span>
+        )
+    }
+
+    const toUTC = (d: string) => d.endsWith('Z') || d.includes('+') ? d : d + 'Z'
+    const formatDate = (d: string) => new Date(toUTC(d)).toLocaleDateString('th-TH', {
+        year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+    })
+    const formatDateShort = (d: string) => new Date(toUTC(d)).toLocaleDateString('th-TH', {
+        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+    })
+
+    const css = `
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&family=DM+Serif+Display&display=swap');
+
+        .dw { font-family: 'Sarabun', sans-serif; }
+
+        /* BACK */
+        .back-link {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-size: 13px; font-weight: 600; color: #64748b;
+            text-decoration: none; margin-bottom: 20px;
+            padding: 7px 14px; border-radius: 10px;
+            border: 1.5px solid #e2e8f0; background: white;
+            transition: all 0.15s;
         }
-    }
+        .back-link:hover { color: #3b82f6; border-color: #bfdbfe; background: #eff6ff; }
 
-    // Helper: Date Format
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('th-TH', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        })
-    }
+        /* 2-COL GRID */
+        .two-col {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 16px;
+            align-items: start;
+        }
 
-    if (loading) return (
-        <div className="flex justify-center py-20">
-            <svg className="animate-spin h-10 w-10 text-blue-500" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-            </svg>
-        </div>
-    )
+        /* ── LEFT: HERO PANEL ── */
+        .hero-panel {
+            background: rgba(255,255,255,0.88);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255,255,255,0.7);
+            border-radius: 22px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+            overflow: hidden;
+        }
 
-    if (error) return (
-        <div className="text-center py-20 space-y-4">
-            <h2 className="text-2xl font-bold text-gray-800">เกิดข้อผิดพลาด</h2>
-            <p className="text-red-500">{error}</p>
-            <Link href="/home/list" className="text-blue-600 hover:underline">กลับไปหน้ารายชื่อ</Link>
-        </div>
-    )
+        /* gradient banner top */
+        .hero-banner {
+            height: 72px;
+            background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+            position: relative;
+        }
+        .hero-banner::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.06'%3E%3Ccircle cx='30' cy='30' r='20'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
 
+        .hero-body { padding: 0 22px 22px; }
+
+        .hero-avatar-wrap { margin-bottom: 14px; padding-top: 16px; }
+        .hero-avatar {
+            width: 56px; height: 56px; border-radius: 16px;
+            background: linear-gradient(135deg, #3b82f6, #6366f1);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px; font-weight: 800; color: white;
+            box-shadow: 0 6px 20px rgba(59,130,246,0.35);
+            border: 3px solid white;
+        }
+
+        .hero-name {
+            font-family: 'DM Serif Display', serif;
+            font-size: 20px; color: #0f172a;
+            letter-spacing: -0.02em; line-height: 1.25;
+            margin-bottom: 10px;
+        }
+
+        /* divider */
+        .hero-divider { height: 1px; background: #f1f5f9; margin: 16px 0; }
+
+        /* info rows */
+        .info-item {
+            display: flex; flex-direction: column; gap: 3px;
+            padding: 10px 12px; border-radius: 10px;
+            background: #f8fafc; border: 1px solid #f1f5f9;
+            margin-bottom: 8px;
+        }
+        .info-item:last-child { margin-bottom: 0; }
+        .info-lbl { font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; }
+        .info-val { font-size: 13px; font-weight: 600; color: #1e293b; }
+
+        /* stat row */
+        .stat-row { display: flex; gap: 8px; margin-bottom: 8px; }
+        .stat-box {
+            flex: 1; background: #f8fafc; border: 1px solid #f1f5f9;
+            border-radius: 10px; padding: 10px 10px 8px;
+            text-align: center;
+        }
+        .stat-num  { font-family: 'DM Serif Display', serif; font-size: 22px; color: #1e293b; line-height: 1; }
+        .stat-lbl2 { font-size: 10px; color: #94a3b8; font-weight: 600; margin-top: 3px; }
+
+        .btn-primary {
+            display: flex; align-items: center; justify-content: center; gap: 7px;
+            width: 100%; padding: 10px; border-radius: 11px; border: none; cursor: pointer;
+            background: linear-gradient(135deg, #3b82f6, #6366f1);
+            color: white; font-family: 'Sarabun', sans-serif;
+            font-size: 13px; font-weight: 700; text-decoration: none;
+            box-shadow: 0 4px 14px rgba(59,130,246,0.28); transition: all 0.18s;
+            margin-top: 4px;
+        }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(59,130,246,0.38); }
+
+        /* ── RIGHT: TAB PANEL ── */
+        .tab-panel {
+            background: rgba(255,255,255,0.88);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255,255,255,0.7);
+            border-radius: 22px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+            overflow: hidden;
+        }
+        .tab-bar {
+            display: flex; gap: 4px;
+            border-bottom: 1px solid #f1f5f9;
+            background: #fafbfc; padding: 0 8px;
+        }
+        .tab-btn {
+            display: flex; align-items: center; gap: 8px;
+            padding: 15px 18px; border: none; background: none;
+            font-family: 'Sarabun', sans-serif; font-size: 14px; font-weight: 600;
+            color: #94a3b8; cursor: pointer; position: relative;
+            transition: color 0.15s; white-space: nowrap;
+        }
+        .tab-btn:hover { color: #475569; }
+        .tab-btn.on { color: #3b82f6; }
+        .tab-btn.on::after {
+            content: ''; position: absolute;
+            bottom: 0; left: 10px; right: 10px; height: 2.5px;
+            border-radius: 2px 2px 0 0;
+            background: linear-gradient(90deg, #3b82f6, #6366f1);
+        }
+        .tab-ic {
+            width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center; font-size: 14px;
+            background: #f1f5f9; transition: background 0.15s;
+        }
+        .tab-btn.on .tab-ic { background: #eff6ff; }
+        .tab-badge {
+            min-width: 20px; height: 20px; border-radius: 10px; padding: 0 6px;
+            background: #e2e8f0; color: #64748b;
+            font-size: 11px; font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .tab-btn.on .tab-badge { background: #dbeafe; color: #3b82f6; }
+
+        /* TAB BODY */
+        .tab-body { padding: 22px 24px; min-height: 300px; }
+
+        /* HEALTH rows */
+        .h-row {
+            display: flex; flex-direction: column; gap: 4px;
+            padding: 13px 16px; background: #f8fafc;
+            border: 1px solid #f1f5f9; border-radius: 12px; margin-bottom: 10px;
+        }
+        .h-row:last-child { margin-bottom: 0; }
+        .h-lbl { font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.07em; }
+        .h-val { font-size: 14px; font-weight: 500; color: #1e293b; white-space: pre-wrap; padding-top: 2px; }
+
+        /* VISIT timeline */
+        .visit-item {
+            display: flex; gap: 14px; align-items: flex-start;
+            padding: 14px 0; border-bottom: 1px solid #f1f5f9;
+        }
+        .visit-item:last-child { border-bottom: none; }
+        .visit-tl { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+        .visit-dot {
+            width: 30px; height: 30px; border-radius: 9px;
+            background: #eff6ff; border: 1.5px solid #bfdbfe;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 13px; color: #3b82f6; font-weight: 700;
+        }
+        .visit-line { width: 1.5px; flex: 1; min-height: 14px; background: #e2e8f0; margin-top: 5px; }
+        .visit-content { flex: 1; min-width: 0; padding-top: 3px; }
+        .visit-date { font-size: 11px; color: #94a3b8; font-weight: 600; margin-bottom: 5px; }
+        .visit-note { font-size: 14px; color: #334155; line-height: 1.55; }
+
+        .empty-msg { text-align: center; padding: 52px 16px; color: #94a3b8; font-size: 14px; }
+        .empty-ico  { font-size: 32px; margin-bottom: 10px; }
+
+        .view-all {
+            display: block; text-align: center; padding: 14px;
+            font-size: 13px; font-weight: 600; color: #3b82f6;
+            text-decoration: none; border-top: 1px solid #f1f5f9;
+            background: #fafbfc; transition: background 0.12s;
+        }
+        .view-all:hover { background: #f1f5f9; }
+
+        /* STATES */
+        .loading-wrap { display: flex; justify-content: center; padding: 80px 0; }
+        .spinner { width: 44px; height: 44px; border-radius: 50%; border: 3px solid #e2e8f0; border-top-color: #3b82f6; animation: spin 0.75s linear infinite; }
+        .error-wrap { text-align: center; padding: 80px 24px; }
+        .error-title { font-size: 20px; font-weight: 700; color: #1e293b; margin-bottom: 8px; }
+        .error-msg   { font-size: 14px; color: #ef4444; margin-bottom: 16px; }
+        .error-back  { font-size: 13px; color: #3b82f6; text-decoration: none; }
+        .error-back:hover { text-decoration: underline; }
+
+        @keyframes spin   { to { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+        .fade-in { animation: fadeIn 0.2s ease both; }
+    `
+
+    if (loading) return (<><style>{css}</style><div className="loading-wrap"><div className="spinner" /></div></>)
+    if (error) return (<><style>{css}</style><div className="error-wrap"><div className="error-title">เกิดข้อผิดพลาด</div><div className="error-msg">{error}</div><Link href="/home/list" className="error-back">← กลับไปหน้ารายชื่อ</Link></div></>)
     if (!elderly) return null
 
+    const visitCount = elderly.recent_visits.length
+
     return (
-        <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-500">
-            {/* Back Button */}
-            <Link href="/home/list" className="inline-flex items-center text-gray-500 hover:text-blue-600 transition-colors">
-                <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
+        <div className="dw">
+            <style>{css}</style>
+
+            {/* BACK */}
+            <Link href="/home/list" className="back-link">
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" /></svg>
                 กลับไปหน้ารายชื่อ
             </Link>
 
-            {/* Header Card */}
-            <div className="bg-white/90 backdrop-blur-lg rounded-3xl shadow-xl p-8 border border-white/20">
-                <div className="flex flex-col md:flex-row gap-6 items-start">
-                    <div className="w-24 h-24 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-2xl flex items-center justify-center text-white text-4xl font-bold shadow-lg flex-shrink-0">
-                        {elderly.full_name.charAt(0)}
-                    </div>
-                    <div className="flex-1 space-y-2">
-                        <div className="flex flex-wrap items-center gap-3">
-                            <h1 className="text-3xl font-bold text-gray-800">{elderly.full_name}</h1>
+            <div className="two-col">
+
+                {/* ── LEFT: HERO PANEL ── */}
+                <div className="hero-panel">
+                    <div className="hero-banner" />
+                    <div className="hero-body">
+                        <div className="hero-avatar-wrap">
+                            <div className="hero-avatar">{elderly.full_name.charAt(0)}</div>
+                        </div>
+
+                        <div className="hero-name">{elderly.full_name}</div>
+
+                        <div style={{ marginBottom: 12 }}>
                             {getRiskBadge(elderly.latest_risk?.risk_level || 'unknown')}
                         </div>
-                        <p className="text-gray-500">
-                            เข้าสู่ระบบเมื่อ {formatDate(elderly.created_at)}
-                        </p>
 
-                        {/* Action Buttons */}
-                        <div className="flex gap-3 pt-2">
-                            {role !== 'guardian' && (
-                                <Link
-                                    href={`/home/visit?elderly_id=${elderly.id}`}
-                                    className="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl shadow-md hover:shadow-lg hover:from-blue-600 hover:to-indigo-700 transition-all flex items-center gap-2"
-                                >
-                                    <span className="text-lg">📝</span>
-                                    บันทึกการเยี่ยม
-                                </Link>
-                            )}
+                        <div className="hero-divider" />
+
+                        {/* stat boxes */}
+                        <div className="stat-row">
+                            <div className="stat-box">
+                                <div className="stat-num">{visitCount}</div>
+                                <div className="stat-lbl2">การเยี่ยม</div>
+                            </div>
+                            <div className="stat-box">
+                                <div className="stat-num" style={{ fontSize: 14, paddingTop: 4 }}>
+                                    {elderly.latest_risk ? '✓' : '—'}
+                                </div>
+                                <div className="stat-lbl2">มีข้อมูลสุขภาพ</div>
+                            </div>
                         </div>
+
+                        <div className="hero-divider" />
+
+                        {/* detail rows */}
+                        <div className="info-item">
+                            <span className="info-lbl">ID ผู้รับการดูแล</span>
+                            <span className="info-val"># {elderly.id}</span>
+                        </div>
+                        <div className="info-item">
+                            <span className="info-lbl">เพิ่มเข้าระบบเมื่อ</span>
+                            <span className="info-val">{formatDateShort(elderly.created_at)}</span>
+                        </div>
+                        {elderly.latest_risk && (
+                            <div className="info-item">
+                                <span className="info-lbl">บันทึกสุขภาพล่าสุด</span>
+                                <span className="info-val">{formatDateShort(elderly.latest_risk.recorded_at)}</span>
+                            </div>
+                        )}
+                        {visitCount > 0 && (
+                            <div className="info-item">
+                                <span className="info-lbl">เยี่ยมล่าสุด</span>
+                                <span className="info-val">{formatDateShort(elderly.recent_visits[0].visited_at)}</span>
+                            </div>
+                        )}
+
+                        {role !== 'guardian' && (
+                            <>
+                                <div className="hero-divider" />
+                                <Link href={`/home/visit?elderly_id=${elderly.id}`} className="btn-primary">
+                                    <span>📝</span> ประวัติการเยี่ยม
+                                </Link>
+                            </>
+                        )}
                     </div>
                 </div>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Risk Info */}
-                <div className="bg-white/90 backdrop-blur-lg rounded-3xl shadow-xl p-6 border border-white/20">
-                    <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                        <span className="text-2xl">🩺</span>
-                        ข้อมูลสุขภาพล่าสุด
-                    </h2>
+                {/* ── RIGHT: TAB PANEL ── */}
+                <div className="tab-panel">
+                    <div className="tab-bar">
+                        <button className={`tab-btn${activeTab === 'health' ? ' on' : ''}`} onClick={() => setActiveTab('health')}>
+                            <span className="tab-ic">🩺</span>
+                            ข้อมูลสุขภาพ
+                        </button>
+                        <button className={`tab-btn${activeTab === 'visits' ? ' on' : ''}`} onClick={() => setActiveTab('visits')}>
+                            <span className="tab-ic">🗓️</span>
+                            ประวัติการเยี่ยม
+                            <span className="tab-badge">{visitCount}</span>
+                        </button>
+                    </div>
 
-                    {elderly.latest_risk ? (
-                        <div className="space-y-4">
-                            <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                                <p className="text-sm text-gray-500 mb-1">บันทึกเมื่อ</p>
-                                <p className="font-medium text-gray-800">{formatDate(elderly.latest_risk.recorded_at)}</p>
-                            </div>
-                            <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                                <p className="text-sm text-gray-500 mb-1">อาการ / หมายเหตุ</p>
-                                <p className="font-medium text-gray-800 whitespace-pre-wrap">
-                                    {elderly.latest_risk.symptoms || '-'}
-                                </p>
-                            </div>
+                    {/* HEALTH TAB */}
+                    {activeTab === 'health' && (
+                        <div className="tab-body fade-in">
+                            {elderly.latest_risk ? (
+                                <>
+                                    <div className="h-row">
+                                        <span className="h-lbl">บันทึกเมื่อ</span>
+                                        <span className="h-val">{formatDate(elderly.latest_risk.recorded_at)}</span>
+                                    </div>
+                                    <div className="h-row">
+                                        <span className="h-lbl">ระดับความเสี่ยง</span>
+                                        <span className="h-val" style={{ paddingTop: 6 }}>
+                                            {getRiskBadge(elderly.latest_risk.risk_level)}
+                                        </span>
+                                    </div>
+                                    <div className="h-row">
+                                        <span className="h-lbl">อาการ / หมายเหตุ</span>
+                                        <span className="h-val">{elderly.latest_risk.symptoms || '-'}</span>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="empty-msg">
+                                    <div className="empty-ico">🩺</div>
+                                    ไม่มีข้อมูลสุขภาพ
+                                </div>
+                            )}
                         </div>
-                    ) : (
-                        <p className="text-gray-500 text-center py-8">ไม่มีข้อมูลความเสี่ยง</p>
+                    )}
+
+                    {/* VISITS TAB */}
+                    {activeTab === 'visits' && (
+                        <>
+                            <div className="tab-body fade-in" style={{ paddingBottom: visitCount > 0 ? 4 : 24 }}>
+                                {visitCount > 0 ? elderly.recent_visits.map((visit, i) => (
+                                    <div className="visit-item" key={i}>
+                                        <div className="visit-tl">
+                                            <div className="visit-dot">✓</div>
+                                            {i < visitCount - 1 && <div className="visit-line" />}
+                                        </div>
+                                        <div className="visit-content">
+                                            <div className="visit-date">{formatDateShort(visit.visited_at)}</div>
+                                            <div className="visit-note">{visit.note || 'ไม่มีบันทึกเพิ่มเติม'}</div>
+                                        </div>
+                                    </div>
+                                )) : (
+                                    <div className="empty-msg">
+                                        <div className="empty-ico">🗓️</div>
+                                        ยังไม่มีประวัติการเยี่ยม
+                                    </div>
+                                )}
+                            </div>
+                            {visitCount > 0 && (
+                                <Link href={`/home/visit?elderly_id=${elderly.id}`} className="view-all">
+                                    ดูประวัติทั้งหมด →
+                                </Link>
+                            )}
+                        </>
                     )}
                 </div>
 
-                {/* Recent Visits */}
-                <div className="bg-white/90 backdrop-blur-lg rounded-3xl shadow-xl p-6 border border-white/20">
-                    <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                        <span className="text-2xl">🗓️</span>
-                        ประวัติการเยี่ยมล่าสุด
-                    </h2>
-
-                    <div className="space-y-4">
-                        {elderly.recent_visits.length > 0 ? (
-                            elderly.recent_visits.map((visit, index) => (
-                                <div key={index} className="flex gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100 hover:bg-white hover:shadow-md transition-all">
-                                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 text-blue-600">
-                                        ✓
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-sm text-gray-500 mb-1">
-                                            {formatDate(visit.visited_at)}
-                                        </p>
-                                        <p className="text-gray-800 line-clamp-2">
-                                            {visit.note || 'ไม่มีบันทึกเพิ่มเติม'}
-                                        </p>
-                                    </div>
-                                </div>
-                            ))
-                        ) : (
-                            <div className="text-center py-8 text-gray-500">
-                                ยังไม่มีประวัติการเยี่ยม
-                            </div>
-                        )}
-
-                        {elderly.recent_visits.length > 0 && (
-                            <Link
-                                href={`/home/visit?elderly_id=${elderly.id}`}
-                                className="block text-center text-blue-600 hover:underline text-sm font-medium pt-2"
-                            >
-                                ดูทั้งหมด
-                            </Link>
-                        )}
-                    </div>
-                </div>
             </div>
         </div>
     )

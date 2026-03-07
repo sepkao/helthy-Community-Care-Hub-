@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE
 
@@ -13,6 +14,7 @@ interface Elderly {
 }
 
 export default function ElderlyListPage() {
+    const router = useRouter()
     const [elderlyList, setElderlyList] = useState<Elderly[]>([])
     const [search, setSearch] = useState('')
     const [loading, setLoading] = useState(true)
@@ -25,7 +27,6 @@ export default function ElderlyListPage() {
         if (storedRole) setRole(storedRole)
     }, [])
 
-    // Modal states
     const [showModal, setShowModal] = useState(false)
     const [newName, setNewName] = useState('')
     const [riskLevel, setRiskLevel] = useState('low')
@@ -33,12 +34,10 @@ export default function ElderlyListPage() {
     const [creating, setCreating] = useState(false)
     const [createError, setCreateError] = useState('')
 
-    // Guardian states
     interface User { id: number; email: string; role: string }
     const [guardians, setGuardians] = useState<User[]>([])
     const [selectedGuardian, setSelectedGuardian] = useState<string>('')
 
-    // Fetch elderly list
     const fetchElderly = async (searchQuery = '', riskLevel = '') => {
         try {
             setLoading(true)
@@ -46,22 +45,13 @@ export default function ElderlyListPage() {
             if (searchQuery) params.set('search', searchQuery)
             if (riskLevel) params.set('risk_level', riskLevel)
             const queryString = params.toString()
-            const url = queryString
-                ? `${API_BASE}/elderly?${queryString}`
-                : `${API_BASE}/elderly`
-
+            const url = queryString ? `${API_BASE}/elderly?${queryString}` : `${API_BASE}/elderly`
             const res = await fetch(url, {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
             })
             const data = await res.json()
-
-            if (data.success) {
-                setElderlyList(data.data)
-            } else {
-                setError(data.message || 'ไม่สามารถดึงข้อมูลได้')
-            }
+            if (data.success) setElderlyList(data.data)
+            else setError(data.message || 'ไม่สามารถดึงข้อมูลได้')
         } catch {
             setError('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้')
         } finally {
@@ -69,18 +59,13 @@ export default function ElderlyListPage() {
         }
     }
 
-    // Fetch guardians
     const fetchGuardians = async () => {
         try {
             const res = await fetch(`${API_BASE}/auth/users`, {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
             })
             const data = await res.json()
-            if (data.success) {
-                setGuardians(data.data)
-            }
+            if (data.success) setGuardians(data.data)
         } catch (error) {
             console.error('Failed to fetch guardians', error)
         }
@@ -91,509 +76,361 @@ export default function ElderlyListPage() {
         fetchGuardians()
     }, [])
 
-    // Handle search
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault()
         fetchElderly(search, riskFilter)
     }
 
-    // Handle risk filter change
     const handleRiskFilter = (level: string) => {
         setRiskFilter(level)
         fetchElderly(search, level)
     }
 
-    // Risk badge helper
+    const riskConfig: Record<string, { label: string; dot: string; bg: string; text: string }> = {
+        low:    { label: 'เสี่ยงต่ำ',  dot: '#10b981', bg: '#ecfdf5', text: '#065f46' },
+        medium: { label: 'ปานกลาง',   dot: '#f59e0b', bg: '#fffbeb', text: '#92400e' },
+        high:   { label: 'สูง',        dot: '#f97316', bg: '#fff7ed', text: '#9a3412' },
+    }
+
     const getRiskBadge = (level: string | null) => {
-        switch (level) {
-            case 'low': return <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium">🟢 เสี่ยงต่ำ</span>
-            case 'medium': return <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">🟡 ปานกลาง</span>
-            case 'high': return <span className="px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">🟠 สูง</span>
-            case 'critical': return <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-medium">🔴 วิกฤต</span>
-            default: return <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full text-xs font-medium">ไม่ระบุ</span>
-        }
+        const cfg = level ? riskConfig[level] : null
+        if (!cfg) return (
+            <span style={{ background: '#f1f5f9', color: '#64748b', padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 500 }}>
+                ไม่ระบุ
+            </span>
+        )
+        return (
+            <span style={{ background: cfg.bg, color: cfg.text, padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: cfg.dot, display: 'inline-block' }} />
+                {cfg.label}
+            </span>
+        )
     }
 
     const riskOptions = [
-        { value: '', label: 'ทั้งหมด', color: 'bg-gray-100 text-gray-700 hover:bg-gray-200' },
-        { value: 'low', label: '🟢 เสี่ยงต่ำ', color: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' },
-        { value: 'medium', label: '🟡 ปานกลาง', color: 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200' },
-        { value: 'high', label: '🟠 สูง', color: 'bg-orange-100 text-orange-700 hover:bg-orange-200' },
-        { value: 'critical', label: '🔴 วิกฤต', color: 'bg-red-100 text-red-700 hover:bg-red-200' },
+        { value: '', label: 'ทั้งหมด' },
+        { value: 'low', label: 'เสี่ยงต่ำ 🟢' },
+        { value: 'medium', label: 'ปานกลาง🟡' },
+        { value: 'high', label: 'สูง🟠' }
     ]
 
-    // Handle create new elderly
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault()
         setCreateError('')
-
-        if (!newName.trim()) {
-            setCreateError('กรุณากรอกชื่อ-นามสกุล')
-            return
-        }
-
+        if (!newName.trim()) { setCreateError('กรุณากรอกชื่อ-นามสกุล'); return }
         setCreating(true)
         try {
             const token = localStorage.getItem('token')
             const res = await fetch(`${API_BASE}/elderly`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({
-                    full_name: newName,
-                    risk_level: riskLevel,
-                    symptoms: symptoms,
+                    full_name: newName, risk_level: riskLevel, symptoms,
                     guardian_id: selectedGuardian ? parseInt(selectedGuardian) : null
                 }),
             })
-
             const data = await res.json()
-
             if (data.success) {
-                setShowModal(false)
-                setNewName('')
-                setRiskLevel('low')
-                setSymptoms('')
-                setSelectedGuardian('')
-                fetchElderly(search) // Refresh list
-            } else {
-                setCreateError(data.message || 'ไม่สามารถเพิ่มข้อมูลได้')
-            }
-        } catch {
-            setCreateError('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้')
-        } finally {
-            setCreating(false)
+                setShowModal(false); setNewName(''); setRiskLevel('low')
+                setSymptoms(''); setSelectedGuardian(''); fetchElderly(search)
+            } else { setCreateError(data.message || 'ไม่สามารถเพิ่มข้อมูลได้') }
+        } catch { setCreateError('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้') }
+        finally { setCreating(false) }
+    }
+
+    const toUTC = (d: string) => d.endsWith('Z') || d.includes('+') ? d : d + 'Z'
+    const formatDate = (dateString: string) =>
+        new Date(toUTC(dateString)).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })
+
+    const css = `
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap');
+        .page-wrap { font-family: 'Sarabun', sans-serif; }
+
+        .toolbar {
+            background: rgba(255,255,255,0.85); backdrop-filter: blur(16px);
+            border: 1px solid rgba(255,255,255,0.7); border-radius: 20px;
+            padding: 20px 24px; margin-bottom: 16px; box-shadow: 0 2px 16px rgba(0,0,0,0.05);
         }
-    }
+        .toolbar-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+        .page-title { font-size: 22px; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 10px; }
+        .page-sub   { font-size: 13px; color: #94a3b8; margin-top: 3px; }
 
-    // Format date
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('th-TH', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-        })
-    }
-
-    // Visit Modal states
-    const [showVisitModal, setShowVisitModal] = useState(false)
-    const [selectedElderlyForVisit, setSelectedElderlyForVisit] = useState<Elderly | null>(null)
-    const [visitUrgency, setVisitUrgency] = useState<'green' | 'yellow' | 'red'>('green')
-    const [visitNote, setVisitNote] = useState('')
-    const [submittingVisit, setSubmittingVisit] = useState(false)
-
-    // Handle open visit modal
-    const openVisitModal = (elderly: Elderly) => {
-        setSelectedElderlyForVisit(elderly)
-        setVisitUrgency('green')
-        setVisitNote('')
-        setShowVisitModal(true)
-    }
-
-    // Handle submit visit
-    const handleVisitSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-        if (!selectedElderlyForVisit) return
-
-        try {
-            setSubmittingVisit(true)
-            const token = localStorage.getItem('token')
-            const res = await fetch(`${API_BASE}/visits`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    elderly_id: selectedElderlyForVisit.id,
-                    urgency: visitUrgency,
-                    note: visitNote
-                })
-            })
-
-            const data = await res.json()
-
-            if (data.success) {
-                setShowVisitModal(false)
-                setSelectedElderlyForVisit(null)
-                setVisitUrgency('green')
-                setVisitNote('')
-                // Optional: Show success message or refresh something
-            } else {
-                alert(data.message || 'บันทึกไม่สำเร็จ')
-            }
-        } catch (error) {
-            console.error('Submit visit error:', error)
-            alert('เกิดข้อผิดพลาดในการเชื่อมต่อ')
-        } finally {
-            setSubmittingVisit(false)
+        .btn-add {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 10px 20px; border-radius: 12px; border: none; cursor: pointer;
+            background: linear-gradient(135deg, #3b82f6, #6366f1); color: white;
+            font-family: 'Sarabun', sans-serif; font-size: 14px; font-weight: 600;
+            box-shadow: 0 4px 14px rgba(59,130,246,0.35); transition: all 0.18s;
         }
-    }
+        .btn-add:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(59,130,246,0.45); }
+
+        .search-row { display: flex; gap: 10px; margin-bottom: 12px; }
+        .search-box { flex: 1; position: relative; }
+        .search-box input {
+            width: 100%; padding: 10px 14px 10px 40px;
+            border: 1.5px solid #e2e8f0; border-radius: 12px;
+            font-family: 'Sarabun', sans-serif; font-size: 14px; color: #1e293b;
+            background: #f8fafc; outline: none; transition: all 0.15s;
+        }
+        .search-box input:focus { border-color: #3b82f6; background: white; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+        .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none; }
+        .btn-search {
+            padding: 10px 20px; border-radius: 12px; border: 1.5px solid #e2e8f0;
+            background: white; font-family: 'Sarabun', sans-serif; font-size: 14px;
+            font-weight: 600; color: #475569; cursor: pointer; transition: all 0.15s;
+        }
+        .btn-search:hover { background: #f1f5f9; border-color: #cbd5e1; }
+
+        .filter-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .filter-label { font-size: 12px; color: #94a3b8; font-weight: 600; }
+        .fpill {
+            padding: 5px 14px; border-radius: 20px; border: 1.5px solid transparent;
+            font-family: 'Sarabun', sans-serif; font-size: 12px; font-weight: 600;
+            cursor: pointer; transition: all 0.15s; background: #f1f5f9; color: #64748b;
+        }
+        .fpill:hover { background: #e2e8f0; }
+        .fpill.active { background: #eff6ff; color: #3b82f6; border-color: #bfdbfe; }
+
+        .table-wrap {
+            background: rgba(255,255,255,0.85); backdrop-filter: blur(16px);
+            border: 1px solid rgba(255,255,255,0.7); border-radius: 20px;
+            overflow: hidden; box-shadow: 0 2px 16px rgba(0,0,0,0.05);
+        }
+        table { width: 100%; border-collapse: collapse; }
+        thead tr { background: #f8fafc; border-bottom: 1.5px solid #e2e8f0; }
+        th { padding: 12px 20px; text-align: left; font-size: 11px; font-weight: 700; color: #94a3b8; letter-spacing: 0.07em; text-transform: uppercase; white-space: nowrap; }
+        th:last-child { text-align: right; }
+        tbody tr { border-bottom: 1px solid #f1f5f9; transition: background 0.12s; }
+        tbody tr:last-child { border-bottom: none; }
+        tbody tr:hover { background: rgba(59,130,246,0.03); }
+        td { padding: 14px 20px; vertical-align: middle; }
+        td:last-child { text-align: right; }
+
+        .td-name { display: flex; align-items: center; gap: 12px; }
+        .avatar {
+            width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
+            background: linear-gradient(135deg, #3b82f6, #6366f1);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 15px; font-weight: 700; color: white;
+        }
+        .name-text { font-size: 14px; font-weight: 600; color: #1e293b; }
+        .name-id   { font-size: 11px; color: #94a3b8; margin-top: 1px; }
+        .date-text { font-size: 13px; color: #64748b; }
+
+        .act-row { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+        .btn-view {
+            padding: 6px 14px; border-radius: 8px; border: 1.5px solid #e2e8f0;
+            background: white; font-family: 'Sarabun', sans-serif;
+            font-size: 13px; font-weight: 600; color: #475569;
+            cursor: pointer; text-decoration: none; transition: all 0.15s;
+            display: inline-flex; align-items: center; gap: 5px;
+        }
+        .btn-view:hover { background: #f8fafc; border-color: #cbd5e1; color: #1e293b; }
+        .btn-visit {
+            padding: 6px 14px; border-radius: 8px; border: none;
+            background: #eff6ff; font-family: 'Sarabun', sans-serif;
+            font-size: 13px; font-weight: 600; color: #3b82f6;
+            cursor: pointer; transition: all 0.15s;
+            display: inline-flex; align-items: center; gap: 5px;
+        }
+        .btn-visit:hover { background: #dbeafe; }
+
+        .count-bar { padding: 12px 24px; border-top: 1px solid #f1f5f9; font-size: 13px; color: #94a3b8; background: #fafbfc; }
+
+        .empty-box { padding: 64px 24px; text-align: center; }
+        .empty-icon { width: 64px; height: 64px; border-radius: 20px; background: #f1f5f9; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; font-size: 28px; }
+        .empty-title { font-size: 16px; font-weight: 700; color: #1e293b; margin-bottom: 6px; }
+        .empty-sub   { font-size: 13px; color: #94a3b8; }
+
+        .ebox { background: #fef2f2; border: 1px solid #fecaca; border-radius: 14px; padding: 12px 18px; margin-bottom: 14px; font-size: 13px; color: #dc2626; display: flex; align-items: center; gap: 8px; }
+
+        .loading-wrap { display: flex; justify-content: center; padding: 64px 0; }
+        .spinner { width: 40px; height: 40px; border-radius: 50%; border: 3px solid #e2e8f0; border-top-color: #3b82f6; animation: spin 0.75s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .overlay { position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,0.45); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .modal { background: white; border-radius: 24px; box-shadow: 0 24px 60px rgba(0,0,0,0.18); padding: 28px 28px 24px; width: 100%; max-width: 440px; }
+        .modal-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 22px; }
+        .modal-title { font-size: 18px; font-weight: 700; color: #1e293b; }
+        .modal-sub   { font-size: 12px; color: #94a3b8; margin-top: 3px; }
+        .modal-close { width: 30px; height: 30px; border-radius: 8px; border: none; background: #f1f5f9; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #64748b; transition: background 0.15s; }
+        .modal-close:hover { background: #e2e8f0; }
+        .form-group { margin-bottom: 16px; }
+        .form-label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+        .form-input, .form-select, .form-textarea {
+            width: 100%; padding: 10px 14px; box-sizing: border-box;
+            border: 1.5px solid #e2e8f0; border-radius: 11px;
+            font-family: 'Sarabun', sans-serif; font-size: 14px; color: #1e293b;
+            background: #f8fafc; outline: none; transition: all 0.15s;
+        }
+        .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: #3b82f6; background: white; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+        .form-textarea { resize: none; }
+        .form-error { background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 10px 14px; font-size: 13px; color: #dc2626; margin-bottom: 14px; }
+        .btn-row { display: flex; gap: 10px; margin-top: 20px; }
+        .btn-cancel { flex: 1; padding: 11px; border-radius: 11px; border: 1.5px solid #e2e8f0; background: white; font-family: 'Sarabun', sans-serif; font-size: 14px; font-weight: 600; color: #64748b; cursor: pointer; transition: all 0.15s; }
+        .btn-cancel:hover { background: #f1f5f9; }
+        .btn-submit { flex: 1; padding: 11px; border-radius: 11px; border: none; background: linear-gradient(135deg, #3b82f6, #6366f1); font-family: 'Sarabun', sans-serif; font-size: 14px; font-weight: 700; color: white; cursor: pointer; transition: all 0.18s; box-shadow: 0 4px 12px rgba(59,130,246,0.3); }
+        .btn-submit:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(59,130,246,0.4); }
+        .btn-submit:disabled { opacity: 0.55; cursor: not-allowed; }
+    `
 
     return (
-        <div className="space-y-6">
-            <div className="max-w-6xl">
-                {/* Header */}
-                <div className="bg-white/90 backdrop-blur-lg rounded-3xl shadow-2xl p-6 mb-6">
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                        <div>
-                            <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                                <span className="w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-xl flex items-center justify-center text-white text-lg">
-                                    👥
-                                </span>
-                                รายชื่อผู้รับการดูแล
-                            </h1>
-                            <p className="text-gray-500 text-sm mt-1">จัดการข้อมูลผู้สูงอายุในความดูแล</p>
-                        </div>
+        <div className="page-wrap">
+            <style>{css}</style>
 
-                        {/* Show Add Button only if NOT guardian */}
-                        {role !== 'guardian' && (
-                            <button
-                                onClick={() => setShowModal(true)}
-                                className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 flex items-center gap-2"
-                            >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                </svg>
-                                เพิ่มผู้รับการดูแล
-                            </button>
-                        )}
+            <div className="toolbar">
+                <div className="toolbar-top">
+                    <div>
+                        <div className="page-title">
+                            <span style={{ width: 38, height: 38, background: 'linear-gradient(135deg,#3b82f6,#6366f1)', borderRadius: 11, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>👥</span>
+                            รายชื่อผู้รับการดูแล
+                        </div>
+                        <div className="page-sub">จัดการข้อมูลผู้สูงอายุในความดูแล</div>
                     </div>
-
-                    {/* Search */}
-                    <form onSubmit={handleSearch} className="mt-6 flex gap-3">
-                        <div className="flex-1 relative">
-                            <svg className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                            <input
-                                type="text"
-                                placeholder="ค้นหาด้วยชื่อ..."
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                            />
-                        </div>
-                        <button
-                            type="submit"
-                            className="px-6 py-3 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-all"
-                        >
-                            ค้นหา
+                    {role !== 'guardian' && (
+                        <button className="btn-add" onClick={() => setShowModal(true)}>
+                            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
+                            เพิ่มผู้รับการดูแล
                         </button>
-                    </form>
-
-                    {/* Risk Level Filter */}
-                    <div className="mt-4 flex flex-wrap gap-2">
-                        <span className="text-sm text-gray-500 py-2 mr-1">คัดกรอง:</span>
-                        {riskOptions.map((opt) => (
-                            <button
-                                key={opt.value}
-                                onClick={() => handleRiskFilter(opt.value)}
-                                className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${riskFilter === opt.value
-                                        ? opt.color + ' ring-2 ring-offset-1 ring-blue-400 shadow-sm'
-                                        : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
-                                    }`}
-                            >
-                                {opt.label}
-                            </button>
-                        ))}
-                    </div>
+                    )}
                 </div>
 
-                {/* Error Message */}
-                {error && (
-                    <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl mb-6 flex items-center gap-2">
-                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                <form className="search-row" onSubmit={handleSearch}>
+                    <div className="search-box">
+                        <svg className="search-icon" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
                         </svg>
-                        {error}
+                        <input type="text" placeholder="ค้นหาด้วยชื่อ..."
+                            value={search} onChange={(e) => setSearch(e.target.value)} />
                     </div>
-                )}
+                    <button type="submit" className="btn-search">ค้นหา</button>
+                </form>
 
-                {/* Loading */}
-                {loading && (
-                    <div className="flex justify-center py-12">
-                        <svg className="animate-spin h-10 w-10 text-blue-500" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                        </svg>
-                    </div>
-                )}
-
-                {/* Cards Grid */}
-                {!loading && elderlyList.length === 0 && (
-                    <div className="bg-white/90 backdrop-blur-lg rounded-3xl shadow-2xl p-12 text-center">
-                        <div className="w-20 h-20 bg-gray-100 rounded-full mx-auto flex items-center justify-center mb-4">
-                            <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                            </svg>
-                        </div>
-                        <h3 className="text-xl font-semibold text-gray-700">ยังไม่มีข้อมูล</h3>
-                        <p className="text-gray-500 mt-2">กดปุ่ม "เพิ่มผู้รับการดูแล" เพื่อเริ่มต้น</p>
-                    </div>
-                )}
-
-                {!loading && elderlyList.length > 0 && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {elderlyList.map((elderly) => (
-                            <div key={elderly.id} className="bg-white/90 backdrop-blur-lg rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border border-white/20 flex flex-col gap-4">
-                                <Link
-                                    href={`/home/list/${elderly.id}`}
-                                    className="block group"
-                                >
-                                    <div className="flex items-start gap-4">
-                                        <div className="w-14 h-14 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-xl flex items-center justify-center text-white text-xl font-bold flex-shrink-0 shadow-md group-hover:scale-105 transition-transform">
-                                            {elderly.full_name.charAt(0)}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <h3 className="text-lg font-semibold text-gray-800 truncate group-hover:text-blue-600 transition-colors">
-                                                {elderly.full_name}
-                                            </h3>
-                                            <div className="flex items-center gap-2 mt-1">
-                                                {getRiskBadge(elderly.risk_level)}
-                                                <span className="text-xs text-gray-400">•</span>
-                                                <p className="text-sm text-gray-500">
-                                                    เพิ่มเมื่อ {formatDate(elderly.created_at)}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </Link>
-
-                                {/* Show Record Visit button only if NOT guardian */}
-                                {role !== 'guardian' && (
-                                    <button
-                                        onClick={() => openVisitModal(elderly)}
-                                        className="w-full py-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors flex items-center justify-center gap-2 font-medium"
-                                    >
-                                        <span className="text-lg">📝</span> บันทึกการเยี่ยม
-                                    </button>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                )}
-
-                {/* Total Count */}
-                {!loading && elderlyList.length > 0 && (
-                    <div className="mt-6 text-center text-gray-500">
-                        พบทั้งหมด {elderlyList.length} รายการ
-                    </div>
-                )}
+                <div className="filter-row">
+                    <span className="filter-label">คัดกรอง:</span>
+                    {riskOptions.map(opt => (
+                        <button key={opt.value} className={`fpill${riskFilter === opt.value ? ' active' : ''}`}
+                            onClick={() => handleRiskFilter(opt.value)}>
+                            {opt.label}
+                        </button>
+                    ))}
+                </div>
             </div>
 
-            {/* Create Elderly Modal */}
-            {showModal && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
-                    <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md scale-100 animate-in zoom-in-95 duration-200">
-                        <div className="flex items-center justify-between mb-6">
-                            <div>
-                                <h2 className="text-xl font-bold text-gray-800">เพิ่มผู้รับการดูแลใหม่</h2>
-                                <p className="text-sm text-gray-500 mt-1">กรอกข้อมูลเบื้องต้นและประเมินความเสี่ยง</p>
-                            </div>
-                            <button
-                                onClick={() => {
-                                    setShowModal(false)
-                                    setNewName('')
-                                    setRiskLevel('low')
-                                    setSymptoms('')
-                                    setCreateError('')
-                                    setSelectedGuardian('')
-                                }}
-                                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-all"
-                            >
-                                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </div>
-
-                        {createError && (
-                            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl text-sm mb-4">
-                                {createError}
-                            </div>
-                        )}
-
-                        <form onSubmit={handleCreate} className="space-y-4">
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-700">ชื่อ-นามสกุล *</label>
-                                <input
-                                    type="text"
-                                    placeholder="เช่น นายสมชาย ใจดี"
-                                    value={newName}
-                                    onChange={(e) => setNewName(e.target.value)}
-                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                    autoFocus
-                                    required
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-700">ผู้ดูแลรับผิดชอบ (Guardian)</label>
-                                <select
-                                    value={selectedGuardian}
-                                    onChange={(e) => setSelectedGuardian(e.target.value)}
-                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none"
-                                >
-                                    <option value="">-- เลือกผู้ดูแล --</option>
-                                    {guardians.map(user => (
-                                        <option key={user.id} value={user.id}>
-                                            {user.email} {user.role === 'admin' ? '(Admin)' : ''}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-700">ระดับความเสี่ยง *</label>
-                                <select
-                                    value={riskLevel}
-                                    onChange={(e) => setRiskLevel(e.target.value)}
-                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none"
-                                >
-                                    <option value="low">🟢 เสี่ยงต่ำ (Low)</option>
-                                    <option value="medium">🟡 เสี่ยงปานกลาง (Medium)</option>
-                                    <option value="high">🟠 เสี่ยงสูง (High)</option>
-                                    <option value="critical">🔴 วิกฤต (Critical)</option>
-                                </select>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-700">อาการเบื้องต้น / หมายเหตุ</label>
-                                <textarea
-                                    placeholder="เช่น ความดันสูง, เดินลำบาก, หลงลืม..."
-                                    value={symptoms}
-                                    onChange={(e) => setSymptoms(e.target.value)}
-                                    rows={3}
-                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
-                                />
-                            </div>
-
-                            <div className="flex gap-3 pt-4">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setShowModal(false)
-                                        setNewName('')
-                                        setRiskLevel('low')
-                                        setSymptoms('')
-                                        setCreateError('')
-                                        setSelectedGuardian('')
-                                    }}
-                                    className="flex-1 py-3 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-all"
-                                >
-                                    ยกเลิก
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={creating}
-                                    className="flex-1 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 disabled:opacity-50"
-                                >
-                                    {creating ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
+            {error && (
+                <div className="ebox">
+                    <svg width="15" height="15" fill="currentColor" viewBox="0 0 20 20" style={{ flexShrink: 0 }}>
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                    {error}
                 </div>
             )}
 
-            {/* Visit Modal */}
-            {showVisitModal && selectedElderlyForVisit && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
-                    <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md scale-100 animate-in zoom-in-95 duration-200">
-                        <div className="flex items-center justify-between mb-6">
+            <div className="table-wrap">
+                {loading ? (
+                    <div className="loading-wrap"><div className="spinner" /></div>
+                ) : elderlyList.length === 0 ? (
+                    <div className="empty-box">
+                        <div className="empty-icon">👥</div>
+                        <div className="empty-title">ยังไม่มีข้อมูล</div>
+                        <div className="empty-sub">กดปุ่ม "เพิ่มผู้รับการดูแล" เพื่อเริ่มต้น</div>
+                    </div>
+                ) : (
+                    <>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ชื่อ-นามสกุล</th>
+                                    <th>ระดับความเสี่ยง</th>
+                                    <th>วันที่เพิ่ม</th>
+                                    <th>การดำเนินการ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {elderlyList.map((elderly) => (
+                                    <tr key={elderly.id}>
+                                        <td>
+                                            <div className="td-name">
+                                                <div className="avatar">{elderly.full_name.charAt(0)}</div>
+                                                <div>
+                                                    <div className="name-text">{elderly.full_name}</div>
+                                                    <div className="name-id">ID #{elderly.id}</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>{getRiskBadge(elderly.risk_level)}</td>
+                                        <td><span className="date-text">{formatDate(elderly.created_at)}</span></td>
+                                        <td>
+                                            <div className="act-row">
+                                                <Link href={`/home/list/${elderly.id}`} className="btn-view">
+                                                    ดูข้อมูล →
+                                                </Link>
+                                                {role !== 'guardian' && (
+                                                    <button className="btn-visit"
+                                                        onClick={() => router.push(`/home/visit/new?elderly_id=${elderly.id}`)}>
+                                                        📝 บันทึกเยี่ยม
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                        <div className="count-bar">พบทั้งหมด {elderlyList.length} รายการ</div>
+                    </>
+                )}
+            </div>
+
+            {/* CREATE MODAL */}
+            {showModal && (
+                <div className="overlay">
+                    <div className="modal">
+                        <div className="modal-head">
                             <div>
-                                <h2 className="text-xl font-bold text-gray-800">บันทึกการเยี่ยม</h2>
-                                <p className="text-sm text-gray-500 mt-1">คุณกำลังบันทึกเยี่ยม: <span className="font-semibold text-blue-600">{selectedElderlyForVisit.full_name}</span></p>
+                                <div className="modal-title">เพิ่มผู้รับการดูแลใหม่</div>
+                                <div className="modal-sub">กรอกข้อมูลเบื้องต้นและประเมินความเสี่ยง</div>
                             </div>
-                            <button
-                                onClick={() => {
-                                    setShowVisitModal(false)
-                                    setSelectedElderlyForVisit(null)
-                                }}
-                                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-all"
-                            >
-                                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
+                            <button className="modal-close" onClick={() => { setShowModal(false); setNewName(''); setRiskLevel('low'); setSymptoms(''); setCreateError(''); setSelectedGuardian('') }}>
+                                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12" /></svg>
                             </button>
                         </div>
 
-                        <form onSubmit={handleVisitSubmit} className="space-y-4">
-                            {/* Urgency */}
-                            <div>
-                                <label className="text-sm font-medium text-gray-700 block mb-3">
-                                    ระดับความเร่งด่วน <span className="text-red-500">*</span>
-                                </label>
-                                <div className="grid grid-cols-3 gap-3">
-                                    <button
-                                        type="button"
-                                        onClick={() => setVisitUrgency('green')}
-                                        className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${visitUrgency === 'green'
-                                            ? 'border-green-500 bg-green-50 text-green-700 ring-2 ring-green-500 ring-offset-1'
-                                            : 'border-gray-200 hover:bg-green-50/50'
-                                            }`}
-                                    >
-                                        <div className="w-3 h-3 rounded-full bg-green-500" />
-                                        <span className="text-sm font-medium">ปกติ</span>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setVisitUrgency('yellow')}
-                                        className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${visitUrgency === 'yellow'
-                                            ? 'border-yellow-500 bg-yellow-50 text-yellow-700 ring-2 ring-yellow-500 ring-offset-1'
-                                            : 'border-gray-200 hover:bg-yellow-50/50'
-                                            }`}
-                                    >
-                                        <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                                        <span className="text-sm font-medium">เฝ้าระวัง</span>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setVisitUrgency('red')}
-                                        className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${visitUrgency === 'red'
-                                            ? 'border-red-500 bg-red-50 text-red-700 ring-2 ring-red-500 ring-offset-1'
-                                            : 'border-gray-200 hover:bg-red-50/50'
-                                            }`}
-                                    >
-                                        <div className="w-3 h-3 rounded-full bg-red-500" />
-                                        <span className="text-sm font-medium">เร่งด่วน</span>
-                                    </button>
-                                </div>
-                            </div>
+                        {createError && <div className="form-error">{createError}</div>}
 
-                            {/* Note */}
-                            <div>
-                                <label className="text-sm font-medium text-gray-700 block mb-2">
-                                    รายละเอียดการเยี่ยม
-                                </label>
-                                <textarea
-                                    placeholder="อาการ, การวัดค่าต่างๆ, หรือข้อความถึงผู้ดูแล..."
-                                    value={visitNote}
-                                    onChange={(e) => setVisitNote(e.target.value)}
-                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none h-32"
-                                />
+                        <form onSubmit={handleCreate}>
+                            <div className="form-group">
+                                <label className="form-label">ชื่อ-นามสกุล *</label>
+                                <input className="form-input" type="text" placeholder="เช่น นายสมชาย ใจดี"
+                                    value={newName} onChange={(e) => setNewName(e.target.value)} autoFocus required />
                             </div>
-
-                            <div className="flex gap-3 pt-4">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setShowVisitModal(false)
-                                        setSelectedElderlyForVisit(null)
-                                    }}
-                                    className="flex-1 py-3 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-all"
-                                >
+                            <div className="form-group">
+                                <label className="form-label">ผู้ดูแลรับผิดชอบ</label>
+                                <select className="form-select" value={selectedGuardian} onChange={(e) => setSelectedGuardian(e.target.value)}>
+                                    <option value="">-- เลือกผู้ดูแล --</option>
+                                    {guardians.map(u => <option key={u.id} value={u.id}>{u.email}{u.role === 'admin' ? ' (Admin)' : ''}</option>)}
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">ระดับความเสี่ยง *</label>
+                                <select className="form-select" value={riskLevel} onChange={(e) => setRiskLevel(e.target.value)}>
+                                    <option value="low">🟢 เสี่ยงต่ำ</option>
+                                    <option value="medium">🟡 เสี่ยงปานกลาง</option>
+                                    <option value="high">🟠 เสี่ยงสูง</option>
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">อาการเบื้องต้น / หมายเหตุ</label>
+                                <textarea className="form-textarea" placeholder="เช่น ความดันสูง, เดินลำบาก..."
+                                    value={symptoms} onChange={(e) => setSymptoms(e.target.value)} rows={3} />
+                            </div>
+                            <div className="btn-row">
+                                <button type="button" className="btn-cancel"
+                                    onClick={() => { setShowModal(false); setNewName(''); setRiskLevel('low'); setSymptoms(''); setCreateError(''); setSelectedGuardian('') }}>
                                     ยกเลิก
                                 </button>
-                                <button
-                                    type="submit"
-                                    disabled={submittingVisit}
-                                    className="flex-1 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 disabled:opacity-50"
-                                >
-                                    {submittingVisit ? 'กำลังบันทึก...' : 'บันทึกการเยี่ยม'}
+                                <button type="submit" className="btn-submit" disabled={creating}>
+                                    {creating ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}
                                 </button>
                             </div>
                         </form>
