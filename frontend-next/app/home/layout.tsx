@@ -40,9 +40,8 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
   const navItems = [
     { href: '/home',        label: 'ภาพรวม',               icon: '📊', active: isHome   },
     { href: '/home/list',   label: 'รายชื่อผู้รับการดูแล',  icon: '👥', active: isList   },
-    { href: '/home/urgent', label: 'เคสเร่งด่วน',           icon: '⚠️', active: isUrgent },
     ...(user?.role !== 'guardian' ? [
-      { href: '/home/visit',     label: 'การเยี่ยม',        icon: '📅', active: isVisits },
+      { href: '/home/visit',     label: 'ประวัติการเยี่ยม',        icon: '📅', active: isVisits },
       { href: '/home/visit/new', label: 'บันทึกการเยี่ยม',  icon: '📝', active: false    },
     ] : []),
   ];
@@ -76,7 +75,7 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
       width: 240px; flex-shrink: 0; height: 100vh;
       position: relative; z-index: 40;
       backdrop-filter: blur(24px);
-      background: rgba(255,255,255,0.80);
+      background: #000435;
       border-right: 1.5px solid rgba(255,255,255,0.65);
       box-shadow: 4px 0 28px rgba(59,130,246,0.08);
       display: flex; flex-direction: column;
@@ -91,9 +90,8 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
       width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
       background: linear-gradient(135deg, #3b82f6, #0ea5e9);
       display: flex; align-items: center; justify-content: center;
-      font-size: 18px; box-shadow: 0 6px 16px rgba(59,130,246,0.28);
     }
-    .sb-title { font-family: 'DM Serif Display', serif; font-size: 16px; color: #1e293b; }
+    .sb-title { font-family: 'DM Serif Display', serif; font-size: 16px; color: #f5f5f5ff; }
     .sb-sub   { font-size: 11px; color: #94a3b8; margin-top: 1px; }
 
     .nav { flex: 1; padding: 14px 12px; display: flex; flex-direction: column; gap: 3px; overflow-y: auto; }
@@ -135,7 +133,7 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
       font-size: 14px; font-weight: 700; color: white;
     }
     .ue { font-size: 12px; color: #1e293b; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .ur { font-size: 11px; color: #94a3b8; margin-top: 1px; }
+    .ur { font-size: 11px; color: #5e656eff; margin-top: 1px; }
     .lout {
       width: 100%; padding: 9px 12px; border-radius: 11px; cursor: pointer;
       background: rgba(239,68,68,0.07); border: 1px solid rgba(239,68,68,0.15);
