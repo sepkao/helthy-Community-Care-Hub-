@@ -85,6 +85,7 @@ backend:lint:
   needs: ["backend:install"]
   script:
     - cd backend
+    - npm install -D typescript    # ติดตั้ง TypeScript compiler
     - npx tsc --noEmit             # ตรวจ type errors โดยไม่ build output
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -112,7 +113,7 @@ backend:build:
   needs: ["backend:lint"]
   script:
     - cd backend
-    - npx tsc --noEmit
+    - npx tsc --noEmit             # typescript ถูกติดตั้งจาก lint stage แล้ว (ผ่าน artifacts)
     # Cloudflare Workers ใช้ wrangler สำหรับ bundle ตอน deploy
     # ไม่ต้อง build แยกที่นี่
 
