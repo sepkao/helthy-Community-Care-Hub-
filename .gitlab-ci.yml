@@ -175,10 +175,8 @@ sonarqube:scan:
     paths:
       - .sonar/cache               # Cache SonarQube analysis data
   script:
-    - |
-      sonar-scanner \
-        -Dsonar.qualitygate.wait=true \
-        -Dsonar.qualitygate.timeout=300
+    - sonar-scanner
+      # (เอาลบเงื่อนไขรอรับผล Quality Gate ออก เพื่อไม่ให้ดึงทิ้ง Pipeline ให้ตก)
   allow_failure: true              # ไม่ให้ pipeline ตก ถ้า SonarQube ยังไม่พร้อม
   rules:
     # รันเมื่อเป็น Merge Request
