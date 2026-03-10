@@ -230,4 +230,56 @@ elderly.post('/', async (c) => {
     }
 });
 
+/**
+ * DELETE /elderly/:id
+ * ลบผู้สูงอายุและข้อมูลที่เกี่ยวข้องทั้งหมด
+ * เฉพาะ caregiver เท่านั้นที่มีสิทธิ์ลบ
+ */
+elderly.delete('/:id', async (c) => {
+    try {
+        const user = c.get('user');
+        const id = c.req.param('id');
+
+        // เฉพาะ caregiver เท่านั้นที่ลบได้
+        if (user.role === 'guardian') {
+            return c.json({ success: false, message: 'ไม่มีสิทธิ์ลบข้อมูล' }, 403);
+        }
+
+        // ตรวจสอบว่ามีข้อมูลอยู่จริง
+        const existing = await c.env.carehub_db
+            .prepare('SELECT id FROM elderly WHERE id = ?')
+            .bind(id)
+            .first();
+
+        if (!existing) {
+            return c.json({ success: false, message: 'ไม่พบข้อมูลผู้สูงอายุ' }, 404);
+        }
+
+        // ลบข้อมูลที่เกี่ยวข้องตามลำดับ (foreign key constraints)
+        await c.env.carehub_db
+            .prepare('DELETE FROM visit_logs WHERE elderly_id = ?')
+            .bind(id).run();
+
+        await c.env.carehub_db
+            .prepare('DELETE FROM risk_records WHERE elderly_id = ?')
+            .bind(id).run();
+
+        await c.env.carehub_db
+            .prepare('DELETE FROM guardians WHERE elderly_id = ?')
+            .bind(id).run();
+
+        await c.env.carehub_db
+            .prepare('DELETE FROM elderly WHERE id = ?')
+            .bind(id).run();
+
+        return c.json({
+            success: true,
+            message: 'ลบข้อมูลสำเร็จ',
+        });
+    } catch (error) {
+        console.error('Delete elderly error:', error);
+        return c.json({ success: false, message: 'เกิดข้อผิดพลาด' }, 500);
+    }
+});
+
 export default elderly;

@@ -34,6 +34,10 @@ export default function ElderlyListPage() {
     const [creating, setCreating] = useState(false)
     const [createError, setCreateError] = useState('')
 
+    // Delete state
+    const [deleteTarget, setDeleteTarget] = useState<Elderly | null>(null)
+    const [deleting, setDeleting] = useState(false)
+
     interface User { id: number; email: string; role: string }
     const [guardians, setGuardians] = useState<User[]>([])
     const [selectedGuardian, setSelectedGuardian] = useState<string>('')
@@ -138,6 +142,29 @@ export default function ElderlyListPage() {
         finally { setCreating(false) }
     }
 
+    const handleDelete = async () => {
+        if (!deleteTarget) return
+        setDeleting(true)
+        try {
+            const token = localStorage.getItem('token')
+            const res = await fetch(`${API_BASE}/elderly/${deleteTarget.id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` },
+            })
+            const data = await res.json()
+            if (data.success) {
+                setDeleteTarget(null)
+                fetchElderly(search, riskFilter)
+            } else {
+                alert(data.message || 'ไม่สามารถลบข้อมูลได้')
+            }
+        } catch {
+            alert('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้')
+        } finally {
+            setDeleting(false)
+        }
+    }
+
     const toUTC = (d: string) => d.endsWith('Z') || d.includes('+') ? d : d + 'Z'
     const formatDate = (dateString: string) =>
         new Date(toUTC(dateString)).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })
@@ -234,6 +261,26 @@ export default function ElderlyListPage() {
             display: inline-flex; align-items: center; gap: 5px;
         }
         .btn-visit:hover { background: #dbeafe; }
+        .btn-delete {
+            padding: 6px 14px; border-radius: 8px; border: none;
+            background: #fef2f2; font-family: 'Sarabun', sans-serif;
+            font-size: 13px; font-weight: 600; color: #dc2626;
+            cursor: pointer; transition: all 0.15s;
+            display: inline-flex; align-items: center; gap: 5px;
+        }
+        .btn-delete:hover { background: #fee2e2; }
+
+        .del-modal { background: white; border-radius: 20px; box-shadow: 0 24px 60px rgba(0,0,0,0.18); padding: 28px; width: 100%; max-width: 400px; text-align: center; }
+        .del-icon { width: 56px; height: 56px; border-radius: 16px; background: #fef2f2; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; font-size: 26px; }
+        .del-title { font-size: 17px; font-weight: 700; color: #1e293b; margin-bottom: 6px; }
+        .del-sub { font-size: 13px; color: #64748b; margin-bottom: 20px; line-height: 1.5; }
+        .del-name { font-weight: 700; color: #dc2626; }
+        .del-btns { display: flex; gap: 10px; }
+        .btn-del-cancel { flex: 1; padding: 11px; border-radius: 11px; border: 1.5px solid #e2e8f0; background: white; font-family: 'Sarabun', sans-serif; font-size: 14px; font-weight: 600; color: #64748b; cursor: pointer; transition: all 0.15s; }
+        .btn-del-cancel:hover { background: #f1f5f9; }
+        .btn-del-confirm { flex: 1; padding: 11px; border-radius: 11px; border: none; background: linear-gradient(135deg, #ef4444, #dc2626); font-family: 'Sarabun', sans-serif; font-size: 14px; font-weight: 700; color: white; cursor: pointer; transition: all 0.18s; box-shadow: 0 4px 12px rgba(239,68,68,0.3); }
+        .btn-del-confirm:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(239,68,68,0.4); }
+        .btn-del-confirm:disabled { opacity: 0.55; cursor: not-allowed; }
 
         .count-bar { padding: 12px 24px; border-top: 1px solid #f1f5f9; font-size: 13px; color: #94a3b8; background: #fafbfc; }
 
@@ -371,6 +418,12 @@ export default function ElderlyListPage() {
                                                         📝 บันทึกเยี่ยม
                                                     </button>
                                                 )}
+                                                {role !== 'guardian' && (
+                                                    <button className="btn-delete"
+                                                        onClick={() => setDeleteTarget(elderly)}>
+                                                        🗑️ ลบ
+                                                    </button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -434,6 +487,28 @@ export default function ElderlyListPage() {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* DELETE CONFIRMATION MODAL */}
+            {deleteTarget && (
+                <div className="overlay">
+                    <div className="del-modal">
+                        <div className="del-icon">⚠️</div>
+                        <div className="del-title">ยืนยันการลบ</div>
+                        <div className="del-sub">
+                            คุณต้องการลบ <span className="del-name">{deleteTarget.full_name}</span> ออกจากระบบหรือไม่?<br/>
+                            ข้อมูลทั้งหมดที่เกี่ยวข้องจะถูกลบถาวร
+                        </div>
+                        <div className="del-btns">
+                            <button className="btn-del-cancel" onClick={() => setDeleteTarget(null)} disabled={deleting}>
+                                ยกเลิก
+                            </button>
+                            <button className="btn-del-confirm" onClick={handleDelete} disabled={deleting}>
+                                {deleting ? 'กำลังลบ...' : 'ยืนยันลบ'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
