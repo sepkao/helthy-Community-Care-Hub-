@@ -214,7 +214,6 @@ deploy:frontend:
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
     - if: $CI_COMMIT_BRANCH == "master"
-  when: manual               # ⚠️ ต้องกดปุ่ม Deploy ใน GitLab เอง 
   environment:
     name: production
     url: https://helthy-community-care-hub-npjb.vercel.app  # URL โปรเจกต์ Vercel ของคุณ
@@ -239,7 +238,6 @@ deploy:backend:
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
     - if: $CI_COMMIT_BRANCH == "master"
-  when: manual                     # ⚠️ ต้องกดปุ่ม Deploy เอง
   environment:
     name: production
     url: https://backend.carehub.workers.dev  # TODO: เปลี่ยนเป็น URL จริง
