@@ -380,7 +380,7 @@ export default function ElderlyListPage() {
                     <div className="empty-box">
                         <div className="empty-icon">👥</div>
                         <div className="empty-title">ยังไม่มีข้อมูล</div>
-                        <div className="empty-sub">กดปุ่ม "เพิ่มผู้รับการดูแล" เพื่อเริ่มต้น</div>
+                        <div className="empty-sub">กดปุ่ม &quot;เพิ่มผู้รับการดูแล&quot; เพื่อเริ่มต้น</div>
                     </div>
                 ) : (
                     <>

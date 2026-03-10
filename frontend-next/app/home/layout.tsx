@@ -17,20 +17,24 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     const token = localStorage.getItem('token');
     const storedRole = localStorage.getItem('role');
-    if (token) {
-      try {
-        const parts = token.split('.');
-        if (parts.length === 3) {
-          const payload = JSON.parse(atob(parts[1]));
-          const email = payload.email || 'User';
-          const role  = payload.role || storedRole || '-';
-          setUser({ email, role });
-          localStorage.setItem('role', role);
-        }
-      } catch {
-        if (storedRole) setUser({ email: 'User', role: storedRole });
+    if (!token) return;
+
+    let email = 'User';
+    let role = storedRole || '-';
+
+    try {
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(atob(parts[1]));
+        email = payload.email || 'User';
+        role = payload.role || storedRole || '-';
+        localStorage.setItem('role', role);
       }
+    } catch {
+      // token parsing failed, use defaults
     }
+
+    setUser({ email, role });
   }, []);
 
   const roleLabel: Record<string, string> = {

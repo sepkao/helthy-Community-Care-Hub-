@@ -1,6 +1,6 @@
 'use client';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState, useMemo, Suspense } from 'react';
+import { useEffect, useState, useMemo, useCallback, Suspense } from 'react';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
@@ -36,7 +36,7 @@ function VisitContent() {
     if (storedRole) setRole(storedRole);
   }, []);
 
-  const fetchVisits = async () => {
+  const fetchVisits = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       let url = `${API_BASE}/visits`;
@@ -49,9 +49,9 @@ function VisitContent() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [elderlyId]);
 
-  useEffect(() => { fetchVisits(); }, [elderlyId]);
+  useEffect(() => { fetchVisits(); }, [fetchVisits]);
 
   const toUTC = (d: string) => d.endsWith('Z') || d.includes('+') ? d : d + 'Z';
   const formatDate = (d: string) => new Date(toUTC(d)).toLocaleDateString('th-TH', {
