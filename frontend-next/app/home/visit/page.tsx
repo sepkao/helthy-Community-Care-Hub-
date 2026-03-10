@@ -1,6 +1,6 @@
 'use client';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, Suspense } from 'react';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
@@ -14,6 +14,14 @@ type Visit = {
 };
 
 export default function VisitPage() {
+  return (
+    <Suspense fallback={<div style={{display:'flex',justifyContent:'center',padding:'64px 0'}}><div style={{width:40,height:40,borderRadius:'50%',border:'3px solid #e2e8f0',borderTopColor:'#3b82f6',animation:'spin 0.75s linear infinite'}}/></div>}>
+      <VisitContent />
+    </Suspense>
+  );
+}
+
+function VisitContent() {
   const [visits, setVisits] = useState<Visit[]>([]);
   const [loading, setLoading] = useState(true);
   const [role, setRole] = useState<string>('');
