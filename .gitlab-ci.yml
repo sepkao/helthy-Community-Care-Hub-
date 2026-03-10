@@ -79,6 +79,7 @@ frontend:lint:
       artifacts: true      # รอ install เสร็จก่อน
   script:
     - cd frontend-next
+    - npm ci --prefer-offline
     - npx eslint . --max-warnings=0  # ไม่อนุญาต warnings เลย
 
 backend:lint:
@@ -87,7 +88,7 @@ backend:lint:
   needs: ["backend:install"]
   script:
     - cd backend
-    - npm install -D typescript    # ติดตั้ง TypeScript compiler
+    - npm ci --prefer-offline
     - npx tsc --noEmit             # ตรวจ type errors โดยไม่ build output
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -100,6 +101,7 @@ frontend:build:
   needs: ["frontend:lint"]
   script:
     - cd frontend-next
+    - npm ci --prefer-offline
     # ตั้ง API URL สำหรับ build (ใช้ CI Variable)
     - echo "NEXT_PUBLIC_API_BASE=${NEXT_PUBLIC_API_BASE}" > .env.production
     - npm run build
@@ -117,6 +119,7 @@ backend:build:
       artifacts: true
   script:
     - cd backend
+    - npm ci --prefer-offline
     - npx tsc --noEmit             # typescript ถูกติดตั้งจาก lint stage แล้ว (ผ่าน artifacts)
     # Cloudflare Workers ใช้ wrangler สำหรับ bundle ตอน deploy
     # ไม่ต้อง build แยกที่นี่
