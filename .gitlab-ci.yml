@@ -192,45 +192,32 @@ sonarqube:scan:
 # STAGE 6: DEPLOY — Deploy ไปสู่ Production
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-# 🐳 Frontend: Build Docker image แล้ว push ไป GitLab Container Registry
-# ✅ ใช้ GitLab Registry — ไม่ต้องตั้ง DOCKER_REGISTRY, DOCKER_USER, DOCKER_PASSWORD
+# 🚀 Frontend: Deploy ไป Vercel
 deploy:frontend:
   stage: deploy
-  image: docker:latest
-  services:
-    - docker:dind                  # Docker-in-Docker สำหรับ build image
+  image: node:20-alpine     # สลับมาใช้ Node สำหรับรัน Vercel CLI
   needs:
     - job: frontend:build
-      artifacts: true              # ต้องการ .next/ build output
+      artifacts: true       # ดึงผลลัพธ์การ Build มา
     - job: sonarqube:scan
       artifacts: false
-      optional: true               # ไม่บังคับว่า sonar ต้องสำเร็จ
-  variables:
-    DOCKER_TLS_CERTDIR: "/certs"
-  before_script:
-    # Login เข้า GitLab Container Registry (ใช้ตัวแปรที่ GitLab inject ให้อัตโนมัติ)
-    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+      optional: true
   script:
     - cd frontend-next
-    # Build image พร้อม tag ทั้ง commit SHA และ latest
-    - docker build
-      --build-arg NEXT_PUBLIC_API_BASE="${NEXT_PUBLIC_API_BASE}"
-      -t "${CI_REGISTRY_IMAGE}/frontend:${CI_COMMIT_SHA}" .
-    - docker tag
-      "${CI_REGISTRY_IMAGE}/frontend:${CI_COMMIT_SHA}"
-      "${CI_REGISTRY_IMAGE}/frontend:latest"
-    # Push ทั้ง 2 tag
-    - docker push "${CI_REGISTRY_IMAGE}/frontend:${CI_COMMIT_SHA}"
-    - docker push "${CI_REGISTRY_IMAGE}/frontend:latest"
-  after_script:
-    - docker logout "$CI_REGISTRY" || true
+    - npm install -g vercel # ติดตั้ง Vercel CLI ใน Pipeline
+    # ดึง Environment ของ Production จาก Vercel
+    - vercel pull --yes --environment=production --token=$VERCEL_TOKEN
+    # Build โค้ดผ่าน Vercel (ใช้ค่าคอนฟิกที่เราเพิ่ง pull มา)
+    - vercel build --prod --token=$VERCEL_TOKEN
+    # สั่ง Deploy ส่งขึ้น Vercel
+    - vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
     - if: $CI_COMMIT_BRANCH == "master"
-  when: manual                     # ⚠️ ต้องกดปุ่ม Deploy เอง (ป้องกัน deploy โดยไม่ตั้งใจ)
+  when: manual               # ⚠️ ต้องกดปุ่ม Deploy ใน GitLab เอง 
   environment:
     name: production
-    url: https://carehub.example.com  # TODO: เปลี่ยนเป็น URL จริง
+    url: https://helthy-community-care-hub-npjb.vercel.app  # URL โปรเจกต์ Vercel ของคุณ
 
 # ☁️ Backend: Deploy ไป Cloudflare Workers
 deploy:backend:
