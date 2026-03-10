@@ -203,10 +203,14 @@ deploy:frontend:
       artifacts: false
       optional: true
   script:
-    - npm install -g vercel # ติดตั้ง Vercel CLI ใน Pipeline
+    - apk add --no-cache curl # บางครั้ง Vercel CLI เรียกร้อง curl
+    - corepack enable         # เปิดใช้งาน pnpm ใน Node.js
+    - corepack prepare pnpm@9 --activate # บังคับใช้ pnpm version 9 ตามที่ Vercel ร้องขอ 
+    - cd frontend-next
+    - npm install -g vercel   # ติดตั้ง Vercel CLI ใน Pipeline
     # ดึง Environment ของ Production จาก Vercel
     - vercel pull --yes --environment=production --token=$VERCEL_TOKEN
-    # Build โค้ดผ่าน Vercel (ใช้ค่าคอนฟิกที่เราเพิ่ง pull มา)
+    # Build โค้ดผ่าน Vercel
     - vercel build --prod --token=$VERCEL_TOKEN
     # สั่ง Deploy ส่งขึ้น Vercel
     - vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
@@ -231,9 +235,6 @@ deploy:backend:
     - cd backend
     # wrangler ใช้ env vars อัตโนมัติ: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
     - npx wrangler deploy --minify
-  variables:
-    CLOUDFLARE_API_TOKEN: $CLOUDFLARE_API_TOKEN
-    CLOUDFLARE_ACCOUNT_ID: $CLOUDFLARE_ACCOUNT_ID
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
     - if: $CI_COMMIT_BRANCH == "master"
