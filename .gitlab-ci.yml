@@ -1,0 +1,250 @@
+# ╔═══════════════════════════════════════════════════════════╗
+# ║  Community CareHub — GitLab CI/CD Pipeline               ║
+# ║  Monorepo: frontend-next (Next.js) + backend (Hono/CF)   ║
+# ╚═══════════════════════════════════════════════════════════╝
+
+# ── กำหนด Stages ── ทำงานตามลำดับ 1→6
+stages:
+  - install
+  - lint
+  - build
+  - test
+  - sonarqube
+  - deploy
+
+# ── Global Variables ──
+variables:
+  NODE_VERSION: "20"
+  FF_USE_FASTZIP: "true"          # เร่งความเร็ว artifact compression
+  NEXT_TELEMETRY_DISABLED: "1"    # ปิด Next.js telemetry ใน CI
+
+# ── Template สำหรับ Node.js jobs ──
+# ใช้ YAML Anchor เพื่อ reuse ไม่ต้องเขียนซ้ำ
+.node_template: &node_template
+  image: node:20-alpine
+  cache:
+    key: "${CI_COMMIT_REF_SLUG}-${CI_JOB_NAME_SLUG}"
+    paths:
+      - frontend-next/node_modules/
+      - backend/node_modules/
+    policy: pull                    # ดึง cache เฉพาะ, install job จะ push
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# STAGE 1: INSTALL — ติดตั้ง dependencies
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+frontend:install:
+  <<: *node_template
+  stage: install
+  cache:
+    key: "${CI_COMMIT_REF_SLUG}-frontend"
+    paths:
+      - frontend-next/node_modules/
+    policy: pull-push              # ทั้งดึงและ push cache กลับ
+  script:
+    - cd frontend-next
+    - npm ci --prefer-offline      # ติดตั้งจาก lock file เท่านั้น (เร็วกว่า npm install)
+  artifacts:
+    paths:
+      - frontend-next/node_modules/
+    expire_in: 1 hour
+    when: on_success
+
+backend:install:
+  <<: *node_template
+  stage: install
+  cache:
+    key: "${CI_COMMIT_REF_SLUG}-backend"
+    paths:
+      - backend/node_modules/
+    policy: pull-push
+  script:
+    - cd backend
+    - npm ci --prefer-offline
+  artifacts:
+    paths:
+      - backend/node_modules/
+    expire_in: 1 hour
+    when: on_success
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# STAGE 2: LINT — ตรวจสอบ Code Quality
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+frontend:lint:
+  <<: *node_template
+  stage: lint
+  needs: ["frontend:install"]      # รอ install เสร็จก่อน
+  script:
+    - cd frontend-next
+    - npx eslint . --max-warnings=0  # ไม่อนุญาต warnings เลย
+
+backend:lint:
+  <<: *node_template
+  stage: lint
+  needs: ["backend:install"]
+  script:
+    - cd backend
+    - npx tsc --noEmit             # ตรวจ type errors โดยไม่ build output
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# STAGE 3: BUILD — Build โปรเจ็ค
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+frontend:build:
+  <<: *node_template
+  stage: build
+  needs: ["frontend:lint"]
+  script:
+    - cd frontend-next
+    # ตั้ง API URL สำหรับ build (ใช้ CI Variable)
+    - echo "NEXT_PUBLIC_API_BASE=${NEXT_PUBLIC_API_BASE}" > .env.production
+    - npm run build
+  artifacts:
+    paths:
+      - frontend-next/.next/       # เก็บ build output สำหรับ deploy
+    expire_in: 1 hour
+    when: on_success
+
+backend:build:
+  <<: *node_template
+  stage: build
+  needs: ["backend:lint"]
+  script:
+    - cd backend
+    - npx tsc --noEmit
+    # Cloudflare Workers ใช้ wrangler สำหรับ bundle ตอน deploy
+    # ไม่ต้อง build แยกที่นี่
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# STAGE 4: TEST — รันเทสต์
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# ⚠️ ยังไม่มี test ในโปรเจ็ค
+# เมื่อเพิ่ม test ในอนาคต ให้เปลี่ยน script เป็น:
+#   - npx vitest run --coverage    (แนะนำ Vitest)
+#   - npx jest --coverage           (ถ้าใช้ Jest)
+
+frontend:test:
+  <<: *node_template
+  stage: test
+  needs: ["frontend:build"]
+  script:
+    - cd frontend-next
+    - echo "⚠️  No tests yet — add tests with Vitest or Jest"
+    - echo "📋 Recommended: npm install -D vitest @testing-library/react"
+  allow_failure: true              # ไม่ให้ pipeline ตกเพราะยังไม่มี test
+
+backend:test:
+  <<: *node_template
+  stage: test
+  needs: ["backend:build"]
+  script:
+    - cd backend
+    - echo "⚠️  No tests yet — add tests with Vitest"
+    - echo "📋 Recommended: npm install -D vitest miniflare"
+  allow_failure: true
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# STAGE 5: SONARQUBE — วิเคราะห์ Code Quality
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+sonarqube:scan:
+  stage: sonarqube
+  image:
+    name: sonarsource/sonar-scanner-cli:latest
+    entrypoint: [""]               # Override default entrypoint
+  needs:
+    - job: frontend:build
+      artifacts: false             # ไม่ต้อง download .next/ มา
+    - job: backend:build
+      artifacts: false
+  variables:
+    SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"
+    GIT_DEPTH: "0"                 # Full git history สำหรับ blame analysis
+  cache:
+    key: "sonar-${CI_COMMIT_REF_SLUG}"
+    paths:
+      - .sonar/cache               # Cache SonarQube analysis data
+  script:
+    - |
+      sonar-scanner \
+        -Dsonar.qualitygate.wait=true \
+        -Dsonar.qualitygate.timeout=300
+  allow_failure: true              # ไม่ให้ pipeline ตก ถ้า SonarQube ยังไม่พร้อม
+  rules:
+    # รันเมื่อเป็น Merge Request
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    # รันเมื่อ push ไป main/master/develop
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "master"
+    - if: $CI_COMMIT_BRANCH == "develop"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# STAGE 6: DEPLOY — Deploy ไปสู่ Production
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# 🐳 Frontend: Build Docker image แล้ว push ไป GitLab Container Registry
+# ✅ ใช้ GitLab Registry — ไม่ต้องตั้ง DOCKER_REGISTRY, DOCKER_USER, DOCKER_PASSWORD
+deploy:frontend:
+  stage: deploy
+  image: docker:latest
+  services:
+    - docker:dind                  # Docker-in-Docker สำหรับ build image
+  needs:
+    - job: frontend:build
+      artifacts: true              # ต้องการ .next/ build output
+    - job: sonarqube:scan
+      artifacts: false
+      optional: true               # ไม่บังคับว่า sonar ต้องสำเร็จ
+  variables:
+    DOCKER_TLS_CERTDIR: "/certs"
+  before_script:
+    # Login เข้า GitLab Container Registry (ใช้ตัวแปรที่ GitLab inject ให้อัตโนมัติ)
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+  script:
+    - cd frontend-next
+    # Build image พร้อม tag ทั้ง commit SHA และ latest
+    - docker build
+      --build-arg NEXT_PUBLIC_API_BASE="${NEXT_PUBLIC_API_BASE}"
+      -t "${CI_REGISTRY_IMAGE}/frontend:${CI_COMMIT_SHA}" .
+    - docker tag
+      "${CI_REGISTRY_IMAGE}/frontend:${CI_COMMIT_SHA}"
+      "${CI_REGISTRY_IMAGE}/frontend:latest"
+    # Push ทั้ง 2 tag
+    - docker push "${CI_REGISTRY_IMAGE}/frontend:${CI_COMMIT_SHA}"
+    - docker push "${CI_REGISTRY_IMAGE}/frontend:latest"
+  after_script:
+    - docker logout "$CI_REGISTRY" || true
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "master"
+  when: manual                     # ⚠️ ต้องกดปุ่ม Deploy เอง (ป้องกัน deploy โดยไม่ตั้งใจ)
+  environment:
+    name: production
+    url: https://carehub.example.com  # TODO: เปลี่ยนเป็น URL จริง
+
+# ☁️ Backend: Deploy ไป Cloudflare Workers
+deploy:backend:
+  <<: *node_template
+  stage: deploy
+  needs:
+    - job: backend:install
+      artifacts: true              # ต้องการ node_modules/
+    - job: sonarqube:scan
+      artifacts: false
+      optional: true
+  script:
+    - cd backend
+    # wrangler ใช้ env vars อัตโนมัติ: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
+    - npx wrangler deploy --minify
+  variables:
+    CLOUDFLARE_API_TOKEN: "${CLOUDFLARE_API_TOKEN}"
+    CLOUDFLARE_ACCOUNT_ID: "${CLOUDFLARE_ACCOUNT_ID}"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "master"
+  when: manual                     # ⚠️ ต้องกดปุ่ม Deploy เอง
+  environment:
+    name: production
+    url: https://backend.carehub.workers.dev  # TODO: เปลี่ยนเป็น URL จริง
