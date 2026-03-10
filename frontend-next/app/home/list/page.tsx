@@ -38,6 +38,13 @@ export default function ElderlyListPage() {
     const [deleteTarget, setDeleteTarget] = useState<Elderly | null>(null)
     const [deleting, setDeleting] = useState(false)
 
+    // Edit risk level state
+    const [editRiskTarget, setEditRiskTarget] = useState<Elderly | null>(null)
+    const [editRiskLevel, setEditRiskLevel] = useState<string>('low')
+    const [editRiskNote, setEditRiskNote] = useState<string>('')
+    const [editingRisk, setEditingRisk] = useState(false)
+    const [editRiskError, setEditRiskError] = useState<string>('')
+
     interface User { id: number; email: string; role: string }
     const [guardians, setGuardians] = useState<User[]>([])
     const [selectedGuardian, setSelectedGuardian] = useState<string>('')
@@ -165,6 +172,33 @@ export default function ElderlyListPage() {
         }
     }
 
+    const handleEditRisk = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!editRiskTarget) return
+        setEditRiskError('')
+        setEditingRisk(true)
+        try {
+            const token = localStorage.getItem('token')
+            const res = await fetch(`${API_BASE}/elderly/${editRiskTarget.id}/risk`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ risk_level: editRiskLevel, symptoms: editRiskNote }),
+            })
+            const data = await res.json()
+            if (data.success) {
+                setEditRiskTarget(null)
+                setEditRiskNote('')
+                fetchElderly(search, riskFilter)
+            } else {
+                setEditRiskError(data.message || 'ไม่สามารถแก้ไขได้')
+            }
+        } catch {
+            setEditRiskError('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้')
+        } finally {
+            setEditingRisk(false)
+        }
+    }
+
     const toUTC = (d: string) => d.endsWith('Z') || d.includes('+') ? d : d + 'Z'
     const formatDate = (dateString: string) =>
         new Date(toUTC(dateString)).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })
@@ -269,6 +303,14 @@ export default function ElderlyListPage() {
             display: inline-flex; align-items: center; gap: 5px;
         }
         .btn-delete:hover { background: #fee2e2; }
+        .btn-edit-risk {
+            padding: 6px 14px; border-radius: 8px; border: none;
+            background: #f0fdf4; font-family: 'Sarabun', sans-serif;
+            font-size: 13px; font-weight: 600; color: #16a34a;
+            cursor: pointer; transition: all 0.15s;
+            display: inline-flex; align-items: center; gap: 5px;
+        }
+        .btn-edit-risk:hover { background: #dcfce7; }
 
         .del-modal { background: white; border-radius: 20px; box-shadow: 0 24px 60px rgba(0,0,0,0.18); padding: 28px; width: 100%; max-width: 400px; text-align: center; }
         .del-icon { width: 56px; height: 56px; border-radius: 16px; background: #fef2f2; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; font-size: 26px; }
@@ -418,6 +460,12 @@ export default function ElderlyListPage() {
                                                         📝 บันทึกเยี่ยม
                                                     </button>
                                                 )}
+                                                {role === 'caregiver' && (
+                                                    <button className="btn-edit-risk"
+                                                        onClick={() => { setEditRiskTarget(elderly); setEditRiskLevel(elderly.risk_level || 'low'); setEditRiskNote(''); setEditRiskError('') }}>
+                                                        🏷️ ความเสี่ยง
+                                                    </button>
+                                                )}
                                                 {role !== 'guardian' && (
                                                     <button className="btn-delete"
                                                         onClick={() => setDeleteTarget(elderly)}>
@@ -484,6 +532,47 @@ export default function ElderlyListPage() {
                                 </button>
                                 <button type="submit" className="btn-submit" disabled={creating}>
                                     {creating ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* EDIT RISK LEVEL MODAL — Caregiver only */}
+            {editRiskTarget && (
+                <div className="overlay">
+                    <div className="modal">
+                        <div className="modal-head">
+                            <div>
+                                <div className="modal-title">🏷️ แก้ไขระดับความเสี่ยง</div>
+                                <div className="modal-sub">{editRiskTarget.full_name}</div>
+                            </div>
+                            <button className="modal-close" onClick={() => setEditRiskTarget(null)}>
+                                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                            </button>
+                        </div>
+
+                        {editRiskError && <div className="form-error">{editRiskError}</div>}
+
+                        <form onSubmit={handleEditRisk}>
+                            <div className="form-group">
+                                <label className="form-label">ระดับความเสี่ยงใหม่ *</label>
+                                <select className="form-select" value={editRiskLevel} onChange={(e) => setEditRiskLevel(e.target.value)}>
+                                    <option value="low">🟢 เสี่ยงต่ำ</option>
+                                    <option value="medium">🟡 เสี่ยงปานกลาง</option>
+                                    <option value="high">🟠 เสี่ยงสูง</option>
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">หมายเหตุ / อาการ</label>
+                                <textarea className="form-textarea" placeholder="เช่น ความดันสูงขึ้น, เดินลำบาก..."
+                                    value={editRiskNote} onChange={(e) => setEditRiskNote(e.target.value)} rows={3} />
+                            </div>
+                            <div className="btn-row">
+                                <button type="button" className="btn-cancel" onClick={() => setEditRiskTarget(null)}>ยกเลิก</button>
+                                <button type="submit" className="btn-submit" disabled={editingRisk}>
+                                    {editingRisk ? 'กำลังบันทึก...' : 'บันทึกการเปลี่ยนแปลง'}
                                 </button>
                             </div>
                         </form>

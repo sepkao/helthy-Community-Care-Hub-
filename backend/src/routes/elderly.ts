@@ -282,4 +282,55 @@ elderly.delete('/:id', async (c) => {
     }
 });
 
+/**
+ * PATCH /elderly/:id/risk
+ * อัปเดตระดับความเสี่ยงของผู้สูงอายุ (เฉพาะ caregiver และ admin)
+ */
+elderly.patch('/:id/risk', async (c) => {
+    try {
+        const user = c.get('user');
+        const id = c.req.param('id');
+
+        // เฉพาะ caregiver และ admin เท่านั้น
+        if (user.role === 'guardian') {
+            return c.json({ success: false, message: 'ไม่มีสิทธิ์แก้ไขระดับความเสี่ยง' }, 403);
+        }
+
+        const { risk_level, symptoms } = await c.req.json();
+
+        const validLevels = ['low', 'medium', 'high'];
+        if (!risk_level || !validLevels.includes(risk_level)) {
+            return c.json({ success: false, message: 'ระดับความเสี่ยงไม่ถูกต้อง (low/medium/high)' }, 400);
+        }
+
+        // ตรวจสอบว่ามีผู้สูงอายุอยู่จริง
+        const existing = await c.env.carehub_db
+            .prepare('SELECT id FROM elderly WHERE id = ?')
+            .bind(id)
+            .first();
+
+        if (!existing) {
+            return c.json({ success: false, message: 'ไม่พบข้อมูลผู้สูงอายุ' }, 404);
+        }
+
+        // Insert risk record ใหม่ (ไม่ลบอันเก่า — เก็บประวัติไว้)
+        await c.env.carehub_db
+            .prepare(`
+        INSERT INTO risk_records (elderly_id, caregiver_id, risk_level, symptoms)
+        VALUES (?, ?, ?, ?)
+      `)
+            .bind(id, user.userId, risk_level, symptoms || '')
+            .run();
+
+        return c.json({
+            success: true,
+            message: 'อัปเดตระดับความเสี่ยงสำเร็จ',
+            data: { elderly_id: id, risk_level },
+        });
+    } catch (error) {
+        console.error('Update risk level error:', error);
+        return c.json({ success: false, message: 'เกิดข้อผิดพลาด' }, 500);
+    }
+});
+
 export default elderly;
