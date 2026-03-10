@@ -7,10 +7,28 @@ import { useSyncExternalStore } from 'react';
 // อ่าน user จาก localStorage token ผ่าน useSyncExternalStore (ไม่ต้องใช้ useEffect + setState เลย)
 const emptySubscribe = () => () => {};
 
+// Cache the last snapshot to avoid React infinite loops
+let cachedSnapshot: { email: string; role: string } | null = null;
+let lastToken: string | null = null;
+let lastStoredRole: string | null = null;
+
 function getUserSnapshot(): { email: string; role: string } | null {
   const token = localStorage.getItem('token');
   const storedRole = localStorage.getItem('role');
-  if (!token) return null;
+
+  // Return cached snapshot if nothing has changed
+  if (token === lastToken && storedRole === lastStoredRole && cachedSnapshot !== undefined) {
+    return cachedSnapshot;
+  }
+
+  // Update last tracked values
+  lastToken = token;
+  lastStoredRole = storedRole;
+
+  if (!token) {
+    cachedSnapshot = null;
+    return cachedSnapshot;
+  }
 
   let email = 'User';
   let role = storedRole || '-';
@@ -21,17 +39,23 @@ function getUserSnapshot(): { email: string; role: string } | null {
       const payload = JSON.parse(atob(parts[1]));
       email = payload.email || 'User';
       role = payload.role || storedRole || '-';
-      localStorage.setItem('role', role);
+      
+      // Only setItem if it has genuinely changed to avoid recursive updates
+      if (role !== storedRole) {
+        localStorage.setItem('role', role);
+      }
     }
   } catch {
     // token parsing failed, use defaults
   }
 
-  return { email, role };
+  cachedSnapshot = { email, role };
+  return cachedSnapshot;
 }
 
+const serverSnapshotInstance: { email: string; role: string } | null = null;
 function getServerSnapshot(): { email: string; role: string } | null {
-  return null; // SSR: ไม่มี localStorage
+  return serverSnapshotInstance; // SSR: ไม่มี localStorage
 }
 
 export default function HomeLayout({ children }: { children: React.ReactNode }) {
