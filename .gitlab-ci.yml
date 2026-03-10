@@ -203,7 +203,6 @@ deploy:frontend:
       artifacts: false
       optional: true
   script:
-    - cd frontend-next
     - npm install -g vercel # ติดตั้ง Vercel CLI ใน Pipeline
     # ดึง Environment ของ Production จาก Vercel
     - vercel pull --yes --environment=production --token=$VERCEL_TOKEN
@@ -233,8 +232,8 @@ deploy:backend:
     # wrangler ใช้ env vars อัตโนมัติ: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
     - npx wrangler deploy --minify
   variables:
-    CLOUDFLARE_API_TOKEN: "${CLOUDFLARE_API_TOKEN}"
-    CLOUDFLARE_ACCOUNT_ID: "${CLOUDFLARE_ACCOUNT_ID}"
+    CLOUDFLARE_API_TOKEN: $CLOUDFLARE_API_TOKEN
+    CLOUDFLARE_ACCOUNT_ID: $CLOUDFLARE_ACCOUNT_ID
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
     - if: $CI_COMMIT_BRANCH == "master"
