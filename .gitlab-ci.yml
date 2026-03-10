@@ -74,7 +74,9 @@ backend:install:
 frontend:lint:
   <<: *node_template
   stage: lint
-  needs: ["frontend:install"]      # รอ install เสร็จก่อน
+  needs:  
+    - job: frontend:install
+      artifacts: true      # รอ install เสร็จก่อน
   script:
     - cd frontend-next
     - npx eslint . --max-warnings=0  # ไม่อนุญาต warnings เลย
@@ -110,7 +112,9 @@ frontend:build:
 backend:build:
   <<: *node_template
   stage: build
-  needs: ["backend:lint"]
+  needs: 
+    - job: backend:lint
+      artifacts: true
   script:
     - cd backend
     - npx tsc --noEmit             # typescript ถูกติดตั้งจาก lint stage แล้ว (ผ่าน artifacts)
