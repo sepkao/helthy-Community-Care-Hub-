@@ -206,7 +206,6 @@ deploy:frontend:
     - apk add --no-cache curl # บางครั้ง Vercel CLI เรียกร้อง curl
     - corepack enable         # เปิดใช้งาน pnpm ใน Node.js
     - corepack prepare pnpm@9 --activate # บังคับใช้ pnpm version 9 ตามที่ Vercel ร้องขอ 
-    - cd frontend-next
     - npm install -g vercel   # ติดตั้ง Vercel CLI ใน Pipeline
     # ดึง Environment ของ Production จาก Vercel
     - vercel pull --yes --environment=production --token=$VERCEL_TOKEN
