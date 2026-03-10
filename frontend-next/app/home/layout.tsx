@@ -2,45 +2,47 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useSyncExternalStore } from 'react';
+
+// อ่าน user จาก localStorage token ผ่าน useSyncExternalStore (ไม่ต้องใช้ useEffect + setState เลย)
+const emptySubscribe = () => () => {};
+
+function getUserSnapshot(): { email: string; role: string } | null {
+  const token = localStorage.getItem('token');
+  const storedRole = localStorage.getItem('role');
+  if (!token) return null;
+
+  let email = 'User';
+  let role = storedRole || '-';
+
+  try {
+    const parts = token.split('.');
+    if (parts.length === 3) {
+      const payload = JSON.parse(atob(parts[1]));
+      email = payload.email || 'User';
+      role = payload.role || storedRole || '-';
+      localStorage.setItem('role', role);
+    }
+  } catch {
+    // token parsing failed, use defaults
+  }
+
+  return { email, role };
+}
+
+function getServerSnapshot(): { email: string; role: string } | null {
+  return null; // SSR: ไม่มี localStorage
+}
 
 export default function HomeLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  // อ่าน user จาก localStorage token (ใช้ function แยก ไม่ต้อง setState ใน effect)
-  function parseUserFromToken(): { email: string; role: string } | null {
-    if (typeof window === 'undefined') return null;
-    const token = localStorage.getItem('token');
-    const storedRole = localStorage.getItem('role');
-    if (!token) return null;
 
-    let email = 'User';
-    let role = storedRole || '-';
-
-    try {
-      const parts = token.split('.');
-      if (parts.length === 3) {
-        const payload = JSON.parse(atob(parts[1]));
-        email = payload.email || 'User';
-        role = payload.role || storedRole || '-';
-        localStorage.setItem('role', role);
-      }
-    } catch {
-      // token parsing failed, use defaults
-    }
-
-    return { email, role };
-  }
-
-  // ใช้ useEffect + ref pattern เพื่อ hydrate user หลัง mount (ป้องกัน SSR mismatch)
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
-  const user = mounted ? parseUserFromToken() : null;
+  const user = useSyncExternalStore(emptySubscribe, getUserSnapshot, getServerSnapshot);
 
   const isHome   = pathname === '/home';
   const isList   = pathname.startsWith('/home/list');
   const isVisits = pathname.startsWith('/home/visit');
-  const isUrgent = pathname.startsWith('/home/urgent');
 
   const roleLabel: Record<string, string> = {
     admin: 'ผู้ดูแลระบบ', caregiver: 'เจ้าหน้าที่ดูแล', guardian: 'ผู้ปกครอง',
