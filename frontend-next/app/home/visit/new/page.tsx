@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 interface Elderly { id: number; full_name: string; }
@@ -8,6 +8,14 @@ interface Elderly { id: number; full_name: string; }
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
 export default function NewVisitPage() {
+  return (
+    <Suspense fallback={<div style={{display:'flex',alignItems:'center',justifyContent:'center',padding:'80px 0'}}><div style={{width:40,height:40,borderRadius:'50%',border:'3px solid #e2e8f0',borderTopColor:'#3b82f6',animation:'spin 0.75s linear infinite'}}/></div>}>
+      <NewVisitContent />
+    </Suspense>
+  );
+}
+
+function NewVisitContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const preSelectedId = searchParams.get('elderly_id');
