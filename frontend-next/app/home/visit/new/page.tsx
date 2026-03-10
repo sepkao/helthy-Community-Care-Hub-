@@ -9,7 +9,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
 export default function NewVisitPage() {
   return (
-    <Suspense fallback={<div style={{display:'flex',alignItems:'center',justifyContent:'center',padding:'80px 0'}}><div style={{width:40,height:40,borderRadius:'50%',border:'3px solid #e2e8f0',borderTopColor:'#3b82f6',animation:'spin 0.75s linear infinite'}}/></div>}>
+    <Suspense fallback={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '80px 0' }}><div style={{ width: 40, height: 40, borderRadius: '50%', border: '3px solid #e2e8f0', borderTopColor: '#3b82f6', animation: 'spin 0.75s linear infinite' }} /></div>}>
       <NewVisitContent />
     </Suspense>
   );
@@ -20,23 +20,23 @@ function NewVisitContent() {
   const searchParams = useSearchParams();
   const preSelectedId = searchParams.get('elderly_id');
 
-  const [elderlyList, setElderlyList]           = useState<Elderly[]>([]);
-  const [selectedElderly, setSelectedElderly]   = useState<string>(preSelectedId || '');
-  const [urgency, setUrgency]                   = useState<'green' | 'yellow' | 'red'>('green');
-  const [note, setNote]                         = useState('');
-  const [visitDate, setVisitDate]               = useState('');
-  const [bp, setBp]                             = useState('');
-  const [pulse, setPulse]                       = useState('');
-  const [temp, setTemp]                         = useState('');
-  const [showConfirm, setShowConfirm]           = useState(false);
-  const [loading, setLoading]                   = useState(true);
-  const [submitting, setSubmitting]             = useState(false);
-  const [error, setError]                       = useState('');
+  const [elderlyList, setElderlyList] = useState<Elderly[]>([]);
+  const [selectedElderly, setSelectedElderly] = useState<string>(preSelectedId || '');
+  const [urgency, setUrgency] = useState<'low' | 'medium' | 'high'>('low');
+  const [note, setNote] = useState('');
+  const [visitDate, setVisitDate] = useState('');
+  const [bp, setBp] = useState('');
+  const [pulse, setPulse] = useState('');
+  const [temp, setTemp] = useState('');
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
-    setVisitDate(`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`);
+    setVisitDate(`${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`);
   }, []);
 
   useEffect(() => {
@@ -78,9 +78,9 @@ function NewVisitContent() {
 
   const selectedName = elderlyList.find(e => String(e.id) === selectedElderly)?.full_name;
   const urgencyConfig = {
-    green:  { label: 'ปกติ',      color: '#10b981', bg: '#ecfdf5', border: '#a7f3d0', text: '#065f46' },
-    yellow: { label: 'เฝ้าระวัง', color: '#f59e0b', bg: '#fffbeb', border: '#fde68a', text: '#92400e' },
-    red:    { label: 'เร่งด่วน',  color: '#ef4444', bg: '#fef2f2', border: '#fecaca', text: '#991b1b' },
+    low:    { label: 'เสี่ยงต่ำ 🟢', color: '#10b981', bg: '#ecfdf5', border: '#a7f3d0', text: '#065f46' },
+    medium: { label: 'ปานกลาง 🟡',   color: '#f59e0b', bg: '#fffbeb', border: '#fde68a', text: '#92400e' },
+    high:   { label: 'สูง 🟠',          color: '#ef4444', bg: '#fef2f2', border: '#fecaca', text: '#991b1b' },
   }
 
   const css = `
@@ -231,7 +231,7 @@ function NewVisitContent() {
 
   if (loading) return (
     <><style>{css}</style>
-    <div className="loading-wrap"><div className="spinner"/><span style={{fontSize:13,color:'#94a3b8'}}>กำลังโหลดข้อมูล...</span></div>
+      <div className="loading-wrap"><div className="spinner" /><span style={{ fontSize: 13, color: '#94a3b8' }}>กำลังโหลดข้อมูล...</span></div>
     </>
   )
 
@@ -240,7 +240,7 @@ function NewVisitContent() {
       <style>{css}</style>
 
       <div className="back-btn" onClick={() => router.back()}>
-        <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
+        <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" /></svg>
         ย้อนกลับ
       </div>
 
@@ -249,8 +249,8 @@ function NewVisitContent() {
 
       {error && (
         <div className="err-box">
-          <svg width="15" height="15" fill="currentColor" viewBox="0 0 20 20" style={{flexShrink:0}}>
-            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd"/>
+          <svg width="15" height="15" fill="currentColor" viewBox="0 0 20 20" style={{ flexShrink: 0 }}>
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
           </svg>
           {error}
         </div>
@@ -276,7 +276,7 @@ function NewVisitContent() {
 
         {/* 2 — Vital Signs */}
         <div className="sec">
-          <div className="sec-title"><span className="sec-num">2</span>ค่าสัญญาณชีพ <span style={{fontSize:10,color:'#cbd5e1',fontWeight:500,textTransform:'none',letterSpacing:0}}>(ถ้ามี)</span></div>
+          <div className="sec-title"><span className="sec-num">2</span>ค่าสัญญาณชีพ <span style={{ fontSize: 10, color: '#cbd5e1', fontWeight: 500, textTransform: 'none', letterSpacing: 0 }}>(ถ้ามี)</span></div>
           <div className="vitals-grid">
             <div className="vital-box">
               <div className="vital-lbl">🩸 ความดัน</div>
@@ -304,9 +304,9 @@ function NewVisitContent() {
 
         {/* 3 — ความเร่งด่วน */}
         <div className="sec">
-          <div className="sec-title"><span className="sec-num">3</span>ระดับความเร่งด่วน *</div>
+          <div className="sec-title"><span className="sec-num">3</span>ระดับความเสี่ยง *</div>
           <div className="urg-grid">
-            {(['green','yellow','red'] as const).map(u => {
+            {(['low', 'medium', 'high'] as const).map(u => {
               const cfg = urgencyConfig[u]; const on = urgency === u
               return (
                 <button key={u} className="urg-btn"
@@ -329,12 +329,12 @@ function NewVisitContent() {
         </div>
 
         {/* SUBMIT */}
-        <div style={{padding:'18px 24px'}}>
+        <div style={{ padding: '18px 24px' }}>
           <button className="btn-submit" disabled={!selectedElderly || submitting} onClick={() => setShowConfirm(true)}>
             {submitting ? (
-              <><div style={{width:16,height:16,borderRadius:'50%',border:'2px solid rgba(255,255,255,0.3)',borderTopColor:'white',animation:'spin 0.75s linear infinite'}}/>กำลังบันทึก...</>
+              <><div style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', animation: 'spin 0.75s linear infinite' }} />กำลังบันทึก...</>
             ) : (
-              <><svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>บันทึกการเยี่ยม</>
+              <><svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>บันทึกการเยี่ยม</>
             )}
           </button>
         </div>
@@ -354,19 +354,19 @@ function NewVisitContent() {
               </div>
               <div className="sum-row">
                 <span className="sum-lbl">วันที่เยี่ยม</span>
-                <span className="sum-val" style={{fontSize:12}}>
-                  {visitDate ? new Date(visitDate).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '—'}
+                <span className="sum-val" style={{ fontSize: 12 }}>
+                  {visitDate ? new Date(visitDate).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
                 </span>
               </div>
               <div className="sum-row">
                 <span className="sum-lbl">ความเร่งด่วน</span>
-                <span className="sum-val" style={{color: urgencyConfig[urgency].color}}>● {urgencyConfig[urgency].label}</span>
+                <span className="sum-val" style={{ color: urgencyConfig[urgency].color }}>● {urgencyConfig[urgency].label}</span>
               </div>
               {(bp || pulse || temp) && (
                 <div className="sum-row">
                   <span className="sum-lbl">Vital Signs</span>
-                  <span className="sum-val" style={{fontSize:12}}>
-                    {[bp&&`BP ${bp}`, pulse&&`💓 ${pulse}`, temp&&`🌡️ ${temp}°C`].filter(Boolean).join(' · ')}
+                  <span className="sum-val" style={{ fontSize: 12 }}>
+                    {[bp && `BP ${bp}`, pulse && `💓 ${pulse}`, temp && `🌡️ ${temp}°C`].filter(Boolean).join(' · ')}
                   </span>
                 </div>
               )}

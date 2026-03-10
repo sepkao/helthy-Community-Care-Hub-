@@ -79,21 +79,24 @@ visit.get('/', async (c) => {
 visit.post('/', async (c) => {
     try {
         const user = c.get('user');
-        const { elderly_id, note, urgency } = await c.req.json();
+        const { elderly_id, note, visited_at, urgency } = await c.req.json();
+        // รองรับทั้ง urgency (เก่า) และ risk_level (ใหม่)
+        const risk_level = urgency; // frontend ส่งมาเป็น low/medium/high
 
         if (!elderly_id) {
             return c.json({ success: false, message: 'กรุณาระบุผู้รับการดูแล' }, 400);
         }
 
-        // Combine urgency into note if provided
+        // แปลงระดับความเสี่ยงเป็นข้อความภาษาไทยสำหรับ note
         let finalNote = note || '';
-        if (urgency) {
-            const urgencyText = {
-                'green': '[ปกติ]',
-                'yellow': '[เฝ้าระวัง]',
-                'red': '[เร่งด่วน]'
-            }[urgency as string] || `[${urgency}]`;
-            finalNote = `${urgencyText} ${finalNote}`;
+        if (risk_level) {
+            const riskText: Record<string, string> = {
+                'low': '[เสี่ยงต่ำ]',
+                'medium': '[ปานกลาง]',
+                'high': '[สูง]',
+            };
+            const label = riskText[risk_level] || `[${risk_level}]`;
+            finalNote = `${label} ${finalNote}`.trim();
         }
 
         // Check permission if guardian
@@ -108,17 +111,30 @@ visit.post('/', async (c) => {
             }
         }
 
-        // Insert
+        // Insert visit log
+        const visitedAt = visited_at || null;
         const result = await c.env.carehub_db
             .prepare(`
                 INSERT INTO visit_logs (elderly_id, caregiver_id, note, visited_at)
-                VALUES (?, ?, ?, datetime('now'))
+                VALUES (?, ?, ?, COALESCE(?, datetime('now')))
             `)
-            .bind(elderly_id, user.userId, finalNote)
+            .bind(elderly_id, user.userId, finalNote, visitedAt)
             .run();
 
         if (!result.success) {
             return c.json({ success: false, message: 'บันทึกข้อมูลไม่สำเร็จ' }, 500);
+        }
+
+        // อัปเดต risk_records พร้อมกัน (ถ้ามีการระบุระดับความเสี่ยง)
+        const validLevels = ['low', 'medium', 'high'];
+        if (risk_level && validLevels.includes(risk_level)) {
+            await c.env.carehub_db
+                .prepare(`
+                    INSERT INTO risk_records (elderly_id, caregiver_id, risk_level, symptoms)
+                    VALUES (?, ?, ?, ?)
+                `)
+                .bind(elderly_id, user.userId, risk_level, finalNote)
+                .run();
         }
 
         return c.json({

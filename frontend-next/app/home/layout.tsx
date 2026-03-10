@@ -77,7 +77,7 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
     { href: '/home/list',   label: 'รายชื่อผู้รับการดูแล',  icon: '👥', active: isList   },
     ...(user?.role !== 'guardian' ? [
       { href: '/home/visit',     label: 'ประวัติการเยี่ยม',        icon: '📅', active: isVisits },
-      { href: '/home/visit/new', label: 'บันทึกการเยี่ยม',  icon: '📝', active: false    },
+      { href: '/home/visit/new', label: 'บันทึกการเยี่ยม',  icon: '📝', active: isVisits    },
     ] : []),
   ];
 
