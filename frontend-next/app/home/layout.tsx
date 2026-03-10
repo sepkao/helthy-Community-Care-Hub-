@@ -64,9 +64,10 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
 
   const user = useSyncExternalStore(emptySubscribe, getUserSnapshot, getServerSnapshot);
 
-  const isHome   = pathname === '/home';
-  const isList   = pathname.startsWith('/home/list');
-  const isVisits = pathname.startsWith('/home/visit');
+  const isHome     = pathname === '/home';
+  const isList     = pathname.startsWith('/home/list');
+  const isNewVisit = pathname === '/home/visit/new' || pathname.startsWith('/home/visit/new/');
+  const isVisits   = pathname.startsWith('/home/visit') && !isNewVisit;
 
   const roleLabel: Record<string, string> = {
     admin: 'ผู้ดูแลระบบ', caregiver: 'เจ้าหน้าที่ดูแล', guardian: 'ผู้ปกครอง',
@@ -76,8 +77,8 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
     { href: '/home',        label: 'ภาพรวม',               icon: '📊', active: isHome   },
     { href: '/home/list',   label: 'รายชื่อผู้รับการดูแล',  icon: '👥', active: isList   },
     ...(user?.role !== 'guardian' ? [
-      { href: '/home/visit',     label: 'ประวัติการเยี่ยม',        icon: '📅', active: isVisits },
-      { href: '/home/visit/new', label: 'บันทึกการเยี่ยม',  icon: '📝', active: isVisits    },
+      { href: '/home/visit',     label: 'ประวัติการเยี่ยม',        icon: '📅', active: isVisits   },
+      { href: '/home/visit/new', label: 'บันทึกการเยี่ยม',  icon: '📝', active: isNewVisit },
     ] : []),
   ];
 
