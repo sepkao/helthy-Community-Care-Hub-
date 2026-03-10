@@ -7,17 +7,12 @@ import { useState, useEffect } from 'react';
 export default function HomeLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [user, setUser] = useState<{ email: string; role: string } | null>(null);
-
-  const isHome   = pathname === '/home';
-  const isList   = pathname.startsWith('/home/list');
-  const isVisits = pathname.startsWith('/home/visit');
-  const isUrgent = pathname.startsWith('/home/urgent');
-
-  useEffect(() => {
+  // อ่าน user จาก localStorage token (ใช้ function แยก ไม่ต้อง setState ใน effect)
+  function parseUserFromToken(): { email: string; role: string } | null {
+    if (typeof window === 'undefined') return null;
     const token = localStorage.getItem('token');
     const storedRole = localStorage.getItem('role');
-    if (!token) return;
+    if (!token) return null;
 
     let email = 'User';
     let role = storedRole || '-';
@@ -34,8 +29,18 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
       // token parsing failed, use defaults
     }
 
-    setUser({ email, role });
-  }, []);
+    return { email, role };
+  }
+
+  // ใช้ useEffect + ref pattern เพื่อ hydrate user หลัง mount (ป้องกัน SSR mismatch)
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  const user = mounted ? parseUserFromToken() : null;
+
+  const isHome   = pathname === '/home';
+  const isList   = pathname.startsWith('/home/list');
+  const isVisits = pathname.startsWith('/home/visit');
+  const isUrgent = pathname.startsWith('/home/urgent');
 
   const roleLabel: Record<string, string> = {
     admin: 'ผู้ดูแลระบบ', caregiver: 'เจ้าหน้าที่ดูแล', guardian: 'ผู้ปกครอง',
