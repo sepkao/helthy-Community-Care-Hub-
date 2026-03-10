@@ -131,8 +131,8 @@ frontend:test:
   needs: ["frontend:build"]
   script:
     - cd frontend-next
-    - echo "⚠️  No tests yet — add tests with Vitest or Jest"
-    - echo "📋 Recommended: npm install -D vitest @testing-library/react"
+    - echo "No tests yet - add tests with Vitest or Jest"
+    - echo "Recommended - npm install -D vitest @testing-library/react"
   allow_failure: true              # ไม่ให้ pipeline ตกเพราะยังไม่มี test
 
 backend:test:
@@ -141,8 +141,8 @@ backend:test:
   needs: ["backend:build"]
   script:
     - cd backend
-    - echo "⚠️  No tests yet — add tests with Vitest"
-    - echo "📋 Recommended: npm install -D vitest miniflare"
+    - echo "No tests yet - add tests with Vitest"
+    - echo "Recommended - npm install -D vitest miniflare"
   allow_failure: true
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
