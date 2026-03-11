@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE
 
@@ -13,8 +13,9 @@ interface Elderly {
     risk_level: string | null
 }
 
-export default function ElderlyListPage() {
+function ElderlyListPageInner() {
     const router = useRouter()
+    const searchParams = useSearchParams()
     const [elderlyList, setElderlyList] = useState<Elderly[]>([])
     const [search, setSearch] = useState('')
     const [loading, setLoading] = useState(true)
@@ -83,8 +84,15 @@ export default function ElderlyListPage() {
     }
 
     useEffect(() => {
-        fetchElderly()
+        const riskParam = searchParams.get('risk')?.toLowerCase() || ''
+        if (riskParam) {
+            setRiskFilter(riskParam)
+            fetchElderly('', riskParam)
+        } else {
+            fetchElderly()
+        }
         fetchGuardians()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     const handleSearch = (e: React.FormEvent) => {
@@ -602,5 +610,13 @@ export default function ElderlyListPage() {
                 </div>
             )}
         </div>
+    )
+}
+
+export default function ElderlyListPage() {
+    return (
+        <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', padding: 64 }}><div style={{ width: 40, height: 40, borderRadius: '50%', border: '3px solid #e2e8f0', borderTopColor: '#3b82f6', animation: 'spin 0.75s linear infinite' }} /></div>}>
+            <ElderlyListPageInner />
+        </Suspense>
     )
 }

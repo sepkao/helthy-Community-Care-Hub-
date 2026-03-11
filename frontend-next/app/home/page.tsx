@@ -230,7 +230,7 @@ export default function HomePage() {
               <div><span className="snum">{stats?.total_elderly ?? 0}</span><span className="sunit">คน</span></div>
               <div className="sfoot">👥 ดูรายชื่อทั้งหมด →</div>
             </Link>
-            <Link href="/home/urgent" className="sc sc-o">
+            <Link href="/home/list?risk=HIGH" className="sc sc-o">
               <div className="sicon">⚠️</div>
               <div className="slabel">เคสเฝ้าระวัง</div>
               <div><span className="snum">{stats?.urgent_elderly ?? 0}</span><span className="sunit">เคส</span></div>
