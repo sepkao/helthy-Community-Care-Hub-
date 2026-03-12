@@ -514,9 +514,9 @@ function ElderlyListPageInner() {
                                     value={newName} onChange={(e) => setNewName(e.target.value)} autoFocus required />
                             </div>
                             <div className="form-group">
-                                <label className="form-label">ผู้ดูแลรับผิดชอบ</label>
+                                <label className="form-label">ผู้ปกครอง</label>
                                 <select className="form-select" value={selectedGuardian} onChange={(e) => setSelectedGuardian(e.target.value)}>
-                                    <option value="">-- เลือกผู้ดูแล --</option>
+                                    <option value="">-- เลือกผู้ปกครอง --</option>
                                     {guardians.map(u => <option key={u.id} value={u.id}>{u.email}{u.role === 'admin' ? ' (Admin)' : ''}</option>)}
                                 </select>
                             </div>
