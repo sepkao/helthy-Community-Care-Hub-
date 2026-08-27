@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { LayoutGrid, Users, Calendar, FileText, LogOut } from 'lucide-react';
 
 // อ่าน user จาก localStorage token ผ่าน useSyncExternalStore (ไม่ต้องใช้ useEffect + setState เลย)
@@ -65,18 +65,8 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
 
   const user = useSyncExternalStore(emptySubscribe, getUserSnapshot, getServerSnapshot);
 
-  // ── sidebar ยืดหดได้ (collapsed state ค้างไว้ให้ผู้ใช้คนเดิม) ──
-  const [collapsed, setCollapsed] = useState(false);
-  useEffect(() => {
-    const saved = localStorage.getItem('sidebarCollapsed');
-    if (saved === '1') setCollapsed(true);
-  }, []);
-  const toggleCollapsed = () => {
-    setCollapsed(prev => {
-      localStorage.setItem('sidebarCollapsed', prev ? '0' : '1');
-      return !prev;
-    });
-  };
+  // ── sidebar ยืดหดตามเมาส์ — เอาเมาส์ไปชี้ถึงกาง พอเอาออกก็หดกลับอัตโนมัติ ไม่ต้องกด ──
+  const [collapsed, setCollapsed] = useState(true);
 
   const isHome     = pathname === '/home';
   const isList     = pathname.startsWith('/home/list');
@@ -126,17 +116,6 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
       display: flex; flex-direction: column;
       transition: width 0.2s ease;
     }
-
-    .sb-toggle {
-      position: absolute; top: 24px; right: -13px; z-index: 50;
-      width: 26px; height: 26px; border-radius: 50%;
-      background: #ffffff; border: 1.5px solid #bbf7d0; color: #15803d;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 13px; line-height: 1; cursor: pointer;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-      transition: background 0.15s;
-    }
-    .sb-toggle:hover { background: #f0fdf4; }
 
     .sb-logo {
       padding: ${collapsed ? '26px 0 20px' : '26px 22px 20px'};
@@ -205,12 +184,8 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
       <style>{css}</style>
 
       <div className="layout">
-        {/* SIDEBAR */}
-        <aside className="sidebar">
-          <button className="sb-toggle" onClick={toggleCollapsed} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
-            {collapsed ? '›' : '‹'}
-          </button>
-
+        {/* SIDEBAR — กางเมื่อเมาส์ชี้ หดเมื่อเมาส์ออก */}
+        <aside className="sidebar" onMouseEnter={() => setCollapsed(false)} onMouseLeave={() => setCollapsed(true)}>
           <div className="sb-logo">
             <div className="sb-title">{collapsed ? 'CH' : 'Care Hub'}</div>
             {!collapsed && <div className="sb-sub">Elderly Care System</div>}

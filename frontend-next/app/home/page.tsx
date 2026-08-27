@@ -27,6 +27,7 @@ interface ElderlyLite {
   id: number;
   full_name: string;
   age: number | null;
+  photo: string | null;
   created_at: string;
 }
 
@@ -297,6 +298,7 @@ export default function HomePage() {
       width: 26px; height: 26px; border-radius: 6px; flex-shrink: 0;
       background: #16a34a; color: white; font-weight: 700; font-size: 11px;
       display: flex; align-items: center; justify-content: center;
+      overflow: hidden;
     }
     .today-name  { font-size: 13px; font-weight: 600; color: #000000; }
     .today-muted { font-size: 12px; color: #6b7280; }
@@ -385,7 +387,11 @@ export default function HomePage() {
                           <tr key={e.id} onClick={() => router.push(`/home/list/${e.id}`)}>
                             <td>
                               <div className="today-name-cell">
-                                <span className="today-avatar">{e.full_name.charAt(0).toUpperCase()}</span>
+                                <span className="today-avatar">
+                                  {e.photo
+                                    ? <img src={e.photo} alt={e.full_name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 6 }} />
+                                    : e.full_name.charAt(0).toUpperCase()}
+                                </span>
                                 <span className="today-name">{e.full_name}</span>
                               </div>
                             </td>

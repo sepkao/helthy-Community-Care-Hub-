@@ -138,28 +138,42 @@ elderly.get('/', async (c) => {
 
 /**
  * GET /elderly/categories
- * ดึงรายชื่อหมวดโรคทั้งหมด (distinct) สำหรับทำ filter
+ * ดึงรายชื่อหมวดโรคทั้งหมด (distinct) พร้อมจำนวนคนต่อโรค สำหรับทำ filter (แสดงตัวเลขในแท็ก)
  * ต้องมาก่อน /:id ไม่งั้นจะถูกจับเป็น id
  */
 elderly.get('/categories', async (c) => {
     try {
         const user = c.get('user');
-        let query = 'SELECT DISTINCT d.name FROM elderly_diseases d';
-        const params: string[] = [];
+        const isGuardian = user.role === 'guardian';
 
-        if (user.role === 'guardian') {
-            query += ' JOIN guardians g ON d.elderly_id = g.elderly_id WHERE g.user_id = ?';
-            params.push(String(user.userId));
+        // จำนวนคนต่อโรค — นับ elderly_id แบบ distinct กันคนซ้ำถ้ามีโรคซ้ำชื่อ
+        let catQuery = 'SELECT d.name, COUNT(DISTINCT d.elderly_id) as count FROM elderly_diseases d';
+        const catParams: string[] = [];
+        if (isGuardian) {
+            catQuery += ' JOIN guardians g ON d.elderly_id = g.elderly_id WHERE g.user_id = ?';
+            catParams.push(String(user.userId));
         }
+        catQuery += ' GROUP BY d.name ORDER BY d.name ASC';
 
-        query += ' ORDER BY d.name ASC';
+        const catStmt = c.env.carehub_db.prepare(catQuery);
+        const catRes = catParams.length > 0 ? await catStmt.bind(...catParams).all() : await catStmt.all();
 
-        const stmt = c.env.carehub_db.prepare(query);
-        const res = params.length > 0 ? await stmt.bind(...params).all() : await stmt.all();
+        // จำนวนคนทั้งหมด — สำหรับแท็ก "All"
+        let totalQuery = 'SELECT COUNT(*) as count FROM elderly e';
+        const totalParams: string[] = [];
+        if (isGuardian) {
+            totalQuery += ' JOIN guardians g ON e.id = g.elderly_id WHERE g.user_id = ?';
+            totalParams.push(String(user.userId));
+        }
+        const totalStmt = c.env.carehub_db.prepare(totalQuery);
+        const totalRow = totalParams.length > 0
+            ? await totalStmt.bind(...totalParams).first<{ count: number }>()
+            : await totalStmt.first<{ count: number }>();
 
         return c.json({
             success: true,
-            data: (res.results as any[]).map((r) => r.name),
+            data: (catRes.results as any[]).map((r) => ({ name: r.name, count: r.count })),
+            total: totalRow?.count ?? 0,
         });
     } catch (error) {
         console.error('Get disease categories error:', error);
@@ -256,6 +270,10 @@ elderly.post('/', async (c) => {
 
         if (!full_name || full_name.trim().length === 0) {
             return c.json({ success: false, message: 'กรุณากรอกชื่อ-นามสกุล' }, 400);
+        }
+        // ชื่อ-นามสกุล — รับได้แค่ตัวอักษร (ไทย/อังกฤษ) กับเว้นวรรค ห้ามตัวเลข/อักขระพิเศษ
+        if (!/^[\p{L}\p{M}\s]+$/u.test(full_name.trim())) {
+            return c.json({ success: false, message: 'ชื่อ-นามสกุลใส่ได้เฉพาะตัวอักษรเท่านั้น ห้ามมีตัวเลขหรืออักขระพิเศษ' }, 400);
         }
 
         // วันเกิด — บังคับกรอก และต้องเป็นวันที่ที่สมเหตุสมผล (ไม่ใช่อนาคต, อายุ 0-120 ปี)

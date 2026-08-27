@@ -3,7 +3,9 @@
 import { useState, useEffect, useRef, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { User } from 'lucide-react'
 import DatePicker from '@/components/DatePicker'
+import ItemMenuList from '@/components/ItemMenuList'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE
 
@@ -11,6 +13,11 @@ interface Disease {
     id: number
     name: string
     note: string | null
+}
+
+interface DiseaseCategory {
+    name: string
+    count: number
 }
 
 interface Elderly {
@@ -32,7 +39,8 @@ function ElderlyListPageInner() {
     const [error, setError] = useState('')
     const [role, setRole] = useState<string>('')
     const [diseaseFilter, setDiseaseFilter] = useState<string>('')
-    const [categories, setCategories] = useState<string[]>([])
+    const [categories, setCategories] = useState<DiseaseCategory[]>([])
+    const [totalRecipients, setTotalRecipients] = useState<number>(0)
 
     useEffect(() => {
         const storedRole = localStorage.getItem('role')
@@ -57,6 +65,8 @@ function ElderlyListPageInner() {
     interface User { id: number; email: string; role: string }
     const [guardians, setGuardians] = useState<User[]>([])
     const [selectedGuardian, setSelectedGuardian] = useState<string>('')
+    const guardianOption = (u: User) => `${u.email}${u.role === 'admin' ? ' (Admin)' : ''}`
+    const selectedGuardianUser = guardians.find(u => String(u.id) === selectedGuardian)
 
     const resetCreateForm = () => {
         setNewFirstName(''); setNewLastName(''); setNewDob(''); setNewNationalId('')
@@ -66,6 +76,9 @@ function ElderlyListPageInner() {
 
     // ต้องกรอก ชื่อ + นามสกุล + วันเกิด + เลขบัตร (13 หลัก) ถึงจะบันทึกได้
     const canCreate = !!newFirstName.trim() && !!newLastName.trim() && !!newDob.trim() && newNationalId.length === 13
+
+    // ชื่อ-นามสกุล — รับได้แค่ตัวอักษร (ไทย/อังกฤษ รวมสระ/วรรณยุกต์ไทยที่เป็น combining mark) กับเว้นวรรค ห้ามตัวเลข/อักขระพิเศษ
+    const onlyLetters = (s: string) => s.replace(/[^\p{L}\p{M}\s]/gu, '')
 
     const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
@@ -111,7 +124,7 @@ function ElderlyListPageInner() {
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
             })
             const data = await res.json()
-            if (data.success) setCategories(data.data)
+            if (data.success) { setCategories(data.data); setTotalRecipients(data.total ?? 0) }
         } catch (error) {
             console.error('Failed to fetch categories', error)
         }
@@ -269,6 +282,11 @@ function ElderlyListPageInner() {
         }
         .fpill:hover { background: #e2e8f0; }
         .fpill.active { background: #f0fdf4; color: #16a34a; border-color: #bbf7d0; }
+        .fpill-count {
+            display: inline-block; margin-left: 2px; padding: 1px 7px; border-radius: 20px;
+            background: rgba(0,0,0,0.08); font-size: 11px; font-weight: 700;
+        }
+        .fpill.active .fpill-count { background: rgba(22,163,74,0.15); color: #16a34a; }
 
         .table-wrap {
             background: #ffffff;
@@ -340,8 +358,6 @@ function ElderlyListPageInner() {
         .btn-del-confirm { flex: 1; padding: 11px; border-radius: 11px; border: none; background: #ef4444; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700; color: white; cursor: pointer; transition: all 0.18s; box-shadow: 0 4px 12px rgba(239,68,68,0.3); }
         .btn-del-confirm:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(239,68,68,0.4); }
         .btn-del-confirm:disabled { opacity: 0.55; cursor: not-allowed; }
-
-        .count-bar { padding: 12px 24px; border-top: 1px solid #f1f5f9; font-size: 13px; color: #6b7280; background: #fafbfc; }
 
         .empty-box { padding: 64px 24px; text-align: center; }
         .empty-title { font-size: 16px; font-weight: 700; color: #000000; margin-bottom: 6px; }
@@ -446,11 +462,13 @@ function ElderlyListPageInner() {
                 <div className="filter-row">
                     <span className="filter-label">Disease:</span>
                     <button className={`fpill${diseaseFilter === '' ? ' active' : ''}`}
-                        onClick={() => handleDiseaseFilter('')}>All</button>
-                    {categories.map(name => (
-                        <button key={name} className={`fpill${diseaseFilter === name ? ' active' : ''}`}
-                            onClick={() => handleDiseaseFilter(name)}>
-                            {name}
+                        onClick={() => handleDiseaseFilter('')}>
+                        All <span className="fpill-count">{totalRecipients}</span>
+                    </button>
+                    {categories.map(c => (
+                        <button key={c.name} className={`fpill${diseaseFilter === c.name ? ' active' : ''}`}
+                            onClick={() => handleDiseaseFilter(c.name)}>
+                            {c.name} <span className="fpill-count">{c.count}</span>
                         </button>
                     ))}
                 </div>
@@ -515,7 +533,8 @@ function ElderlyListPageInner() {
                                         <td>
                                             <div className="act-row">
                                                 <Link href={`/home/list/${elderly.id}`} className="btn-view">
-                                                    View →
+                                                    <User size={14} strokeWidth={2} />
+                                                    View
                                                 </Link>
                                                 {role !== 'guardian' && (
                                                     <button className="btn-visit"
@@ -535,7 +554,6 @@ function ElderlyListPageInner() {
                                 ))}
                             </tbody>
                         </table>
-                        <div className="count-bar">{elderlyList.length} recipients found</div>
                     </>
                 )}
             </div>
@@ -583,12 +601,12 @@ function ElderlyListPageInner() {
                                 <div className="form-group">
                                     <label className="form-label">First Name *</label>
                                     <input className="form-input" type="text" placeholder="e.g. John"
-                                        value={newFirstName} onChange={(e) => setNewFirstName(e.target.value)} autoFocus required />
+                                        value={newFirstName} onChange={(e) => setNewFirstName(onlyLetters(e.target.value))} autoFocus required />
                                 </div>
                                 <div className="form-group">
                                     <label className="form-label">Last Name *</label>
                                     <input className="form-input" type="text" placeholder="e.g. Smith"
-                                        value={newLastName} onChange={(e) => setNewLastName(e.target.value)} required />
+                                        value={newLastName} onChange={(e) => setNewLastName(onlyLetters(e.target.value))} required />
                                 </div>
                             </div>
                             <div className="form-group">
@@ -612,10 +630,17 @@ function ElderlyListPageInner() {
                             </div>
                             <div className="form-group">
                                 <label className="form-label">Guardian</label>
-                                <select className="form-select" value={selectedGuardian} onChange={(e) => setSelectedGuardian(e.target.value)}>
-                                    <option value="">-- Select guardian --</option>
-                                    {guardians.map(u => <option key={u.id} value={u.id}>{u.email}{u.role === 'admin' ? ' (Admin)' : ''}</option>)}
-                                </select>
+                                <ItemMenuList
+                                    mode="dropdown"
+                                    fullWidth
+                                    placeholder="Select Recipient's Guardian"
+                                    items={guardians.map(guardianOption)}
+                                    activeItem={selectedGuardianUser ? guardianOption(selectedGuardianUser) : ''}
+                                    onSelect={(option) => {
+                                        const found = guardians.find(u => guardianOption(u) === option);
+                                        setSelectedGuardian(found ? String(found.id) : '');
+                                    }}
+                                />
                             </div>
 
                             {/* DISEASES */}
