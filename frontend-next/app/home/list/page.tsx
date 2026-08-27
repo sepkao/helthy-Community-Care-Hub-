@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
+import DatePicker from '@/components/DatePicker'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE
 
@@ -592,11 +593,15 @@ function ElderlyListPageInner() {
                             </div>
                             <div className="form-group">
                                 <label className="form-label">Date of Birth *</label>
-                                <input className="form-input" type="date"
-                                    max={new Date().toISOString().slice(0, 10)}
-                                    value={newDob}
-                                    onChange={(e) => setNewDob(e.target.value)}
-                                    required />
+                                <DatePicker
+                                    fullWidth
+                                    placeholder="Select date of birth"
+                                    value={newDob || null}
+                                    onChange={(d) => {
+                                        const pad = (n: number) => String(n).padStart(2, '0');
+                                        setNewDob(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`);
+                                    }}
+                                />
                             </div>
                             <div className="form-group">
                                 <label className="form-label">National ID * <span style={{ fontWeight: 500, color: '#6b7280' }}>({newNationalId.length}/13)</span></label>
