@@ -10,7 +10,7 @@ const styles = `
 
   body {
     font-family: 'Sarabun', sans-serif;
-    background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 50%, #ecfeff 100%);
+    background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 50%, #f7fee7 100%);
     min-height: 100vh;
     overflow-x: hidden;
   }
@@ -20,7 +20,7 @@ const styles = `
     backdrop-filter: blur(20px);
     background: rgba(255,255,255,0.72);
     border-bottom: 1px solid rgba(255,255,255,0.5);
-    box-shadow: 0 1px 20px rgba(59,130,246,0.06);
+    box-shadow: 0 1px 20px rgba(22,163,74,0.06);
   }
   .topbar-inner {
     max-width: 1200px; margin: 0 auto;
@@ -29,20 +29,20 @@ const styles = `
   }
   .logo {
     font-family: 'DM Serif Display', serif;
-    font-size: 18px; color: #1e40af; letter-spacing: -0.01em;
+    font-size: 18px; color: #166534; letter-spacing: -0.01em;
   }
   .login-btn {
     padding: 9px 22px; border-radius: 50px;
-    background: linear-gradient(135deg, #3b82f6, #0ea5e9);
+    background: linear-gradient(135deg, #16a34a, #22c55e);
     color: white; font-family: 'Sarabun', sans-serif;
     font-size: 14px; font-weight: 600; text-decoration: none;
-    box-shadow: 0 4px 14px rgba(59,130,246,0.35);
+    box-shadow: 0 4px 14px rgba(22,163,74,0.35);
     transition: transform 0.18s, box-shadow 0.18s;
     display: inline-block;
   }
   .login-btn:hover {
     transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(59,130,246,0.45);
+    box-shadow: 0 6px 20px rgba(22,163,74,0.45);
   }
 
   .hero {
@@ -54,10 +54,10 @@ const styles = `
   }
   .hero-tag {
     display: inline-flex; align-items: center; gap: 8px;
-    background: rgba(59,130,246,0.08);
-    border: 1px solid rgba(59,130,246,0.2);
+    background: rgba(22,163,74,0.08);
+    border: 1px solid rgba(22,163,74,0.2);
     border-radius: 50px; padding: 6px 16px;
-    font-size: 12px; font-weight: 600; color: #3b82f6;
+    font-size: 12px; font-weight: 600; color: #16a34a;
     letter-spacing: 0.06em; text-transform: uppercase;
     margin-bottom: 28px;
     animation: fadeUp 0.6s ease both;
@@ -68,7 +68,7 @@ const styles = `
     color: #1e293b; line-height: 1.1; letter-spacing: -0.02em;
     animation: fadeUp 0.7s ease 0.1s both;
   }
-  .hero-title span { color: #3b82f6; }
+  .hero-title span { color: #16a34a; }
   .hero-sub {
     margin-top: 20px; max-width: 480px;
     font-size: 16px; line-height: 1.7; color: #64748b;
@@ -83,16 +83,16 @@ const styles = `
     backdrop-filter: blur(20px);
     background: rgba(255,255,255,0.72);
     border: 1.5px solid rgba(255,255,255,0.7);
-    box-shadow: 0 20px 60px rgba(59,130,246,0.12), 0 2px 0 rgba(255,255,255,0.8) inset;
+    box-shadow: 0 20px 60px rgba(22,163,74,0.12), 0 2px 0 rgba(255,255,255,0.8) inset;
     border-radius: 28px; padding: 40px 36px;
     max-width: 420px; width: 100%;
   }
   .card-icon {
     width: 48px; height: 48px; border-radius: 14px;
-    background: linear-gradient(135deg, #3b82f6, #0ea5e9);
+    background: linear-gradient(135deg, #16a34a, #22c55e);
     display: flex; align-items: center; justify-content: center;
     font-size: 22px; margin-bottom: 16px;
-    box-shadow: 0 8px 20px rgba(59,130,246,0.3);
+    box-shadow: 0 8px 20px rgba(22,163,74,0.3);
   }
   .card-title {
     font-family: 'DM Serif Display', serif;
@@ -101,16 +101,16 @@ const styles = `
   .card-desc { font-size: 14px; line-height: 1.7; color: #64748b; }
   .card-cta {
     display: inline-block; margin-top: 24px;
-    background: linear-gradient(135deg, #3b82f6, #0ea5e9);
+    background: linear-gradient(135deg, #16a34a, #22c55e);
     color: white; font-family: 'Sarabun', sans-serif;
     font-size: 15px; font-weight: 700; text-decoration: none;
     padding: 13px 28px; border-radius: 14px;
-    box-shadow: 0 6px 20px rgba(59,130,246,0.35);
+    box-shadow: 0 6px 20px rgba(22,163,74,0.35);
     transition: transform 0.18s, box-shadow 0.18s;
   }
   .card-cta:hover {
     transform: translateY(-2px) scale(1.02);
-    box-shadow: 0 10px 28px rgba(59,130,246,0.45);
+    box-shadow: 0 10px 28px rgba(22,163,74,0.45);
   }
 
   .features {
@@ -178,11 +178,11 @@ function NetworkBackground() {
         <line key={i}
           x1={nodes[a][0]} y1={nodes[a][1]}
           x2={nodes[b][0]} y2={nodes[b][1]}
-          stroke="#3b82f6" strokeWidth="1"
+          stroke="#16a34a" strokeWidth="1"
         />
       ))}
       {nodes.map(([cx, cy], i) => (
-        <circle key={i} cx={cx} cy={cy} r={i === 0 ? 6 : 4} fill="#3b82f6" />
+        <circle key={i} cx={cx} cy={cy} r={i === 0 ? 6 : 4} fill="#16a34a" />
       ))}
     </svg>
   );
@@ -211,11 +211,6 @@ function TiltCard({ children }: { children: React.ReactNode }) {
 
 export default function LandingPage() {
   useParallax();
-
-  const features = [
-    { emoji: "🔔", label: "แจ้งเตือนอัตโนมัติ", color: "#10b981" },
-    { emoji: "🤝", label: "ประสานงานทีมดูแล", color: "#f59e0b" },
-  ];
 
   return (
     <>
@@ -265,15 +260,6 @@ export default function LandingPage() {
               </Link>
             </div>
           </TiltCard>
-        </div>
-
-        <div className="features">
-          {features.map(({ emoji, label, color }) => (
-            <div key={label} className="feature-pill">
-              <span className="feature-dot" style={{ background: color }} />
-              {emoji} {label}
-            </div>
-          ))}
         </div>
       </main>
 

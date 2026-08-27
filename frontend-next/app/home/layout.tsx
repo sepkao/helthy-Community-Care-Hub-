@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
+import { LayoutGrid, Users, Calendar, FileText, LogOut } from 'lucide-react';
 
 // อ่าน user จาก localStorage token ผ่าน useSyncExternalStore (ไม่ต้องใช้ useEffect + setState เลย)
 const emptySubscribe = () => () => {};
@@ -39,7 +40,7 @@ function getUserSnapshot(): { email: string; role: string } | null {
       const payload = JSON.parse(atob(parts[1]));
       email = payload.email || 'User';
       role = payload.role || storedRole || '-';
-      
+
       // Only setItem if it has genuinely changed to avoid recursive updates
       if (role !== storedRole) {
         localStorage.setItem('role', role);
@@ -64,21 +65,34 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
 
   const user = useSyncExternalStore(emptySubscribe, getUserSnapshot, getServerSnapshot);
 
+  // ── sidebar ยืดหดได้ (collapsed state ค้างไว้ให้ผู้ใช้คนเดิม) ──
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    const saved = localStorage.getItem('sidebarCollapsed');
+    if (saved === '1') setCollapsed(true);
+  }, []);
+  const toggleCollapsed = () => {
+    setCollapsed(prev => {
+      localStorage.setItem('sidebarCollapsed', prev ? '0' : '1');
+      return !prev;
+    });
+  };
+
   const isHome     = pathname === '/home';
   const isList     = pathname.startsWith('/home/list');
   const isNewVisit = pathname === '/home/visit/new' || pathname.startsWith('/home/visit/new/');
   const isVisits   = pathname.startsWith('/home/visit') && !isNewVisit;
 
   const roleLabel: Record<string, string> = {
-    admin: 'ผู้ดูแลระบบ', caregiver: 'เจ้าหน้าที่ดูแล', guardian: 'ผู้ปกครอง',
+    admin: 'Administrator', caregiver: 'Caregiver', guardian: 'Guardian',
   };
 
   const navItems = [
-    { href: '/home',        label: 'ภาพรวม',               icon: '📊', active: isHome   },
-    { href: '/home/list',   label: 'รายชื่อผู้รับการดูแล',  icon: '👥', active: isList   },
+    { href: '/home',        label: 'Dashboard',    active: isHome,   Icon: LayoutGrid as (typeof LayoutGrid | undefined) },
+    { href: '/home/list',   label: 'Care Patient',  active: isList,   Icon: Users as (typeof LayoutGrid | undefined) },
     ...(user?.role !== 'guardian' ? [
-      { href: '/home/visit',     label: 'ประวัติการเยี่ยม',        icon: '📅', active: isVisits   },
-      { href: '/home/visit/new', label: 'บันทึกการเยี่ยม',  icon: '📝', active: isNewVisit },
+      { href: '/home/visit',     label: 'Health Check History', active: isVisits,   Icon: Calendar as (typeof LayoutGrid | undefined) },
+      { href: '/home/visit/new', label: 'New Health Check',     active: isNewVisit, Icon: FileText as (typeof LayoutGrid | undefined) },
     ] : []),
   ];
 
@@ -88,102 +102,100 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
     router.push('/login');
   };
 
+  const initial = (s: string) => s.trim().charAt(0).toUpperCase() || '?';
+
   const css = `
-    @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&family=DM+Serif+Display&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; font-family: 'Sarabun', sans-serif; }
+    html, body { height: 100%; font-family: 'Inter', sans-serif; }
 
     .layout {
       display: flex; height: 100vh;
-      background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 50%, #ecfeff 100%);
+      background: #ffffff;
       overflow: hidden; position: relative;
     }
 
-    /* bg blobs */
-    .blob { position: fixed; border-radius: 50%; pointer-events: none; z-index: 0; }
-    .b1 { width: 500px; height: 500px; top: -140px; right: -100px;
-          background: radial-gradient(circle, rgba(59,130,246,0.10) 0%, transparent 70%); }
-    .b2 { width: 400px; height: 400px; bottom: -80px; left: 160px;
-          background: radial-gradient(circle, rgba(6,182,212,0.08) 0%, transparent 70%); }
-
-    /* ── SIDEBAR ── */
+    /* ── SIDEBAR — ยืดหดได้, พื้นขาว ตัวหนังสือเขียว ── */
     .sidebar {
-      width: 240px; flex-shrink: 0; height: 100vh;
+      width: ${collapsed ? '76px' : '240px'};
+      flex-shrink: 0; height: 100vh;
       position: relative; z-index: 40;
-      backdrop-filter: blur(24px);
-      background: #000435;
-      border-right: 1.5px solid rgba(255,255,255,0.65);
-      box-shadow: 4px 0 28px rgba(59,130,246,0.08);
+      background: #ffffff;
+      border-right: 1.5px solid #e5e7eb;
+      box-shadow: 2px 0 10px rgba(0,0,0,0.03);
       display: flex; flex-direction: column;
+      transition: width 0.2s ease;
     }
+
+    .sb-toggle {
+      position: absolute; top: 24px; right: -13px; z-index: 50;
+      width: 26px; height: 26px; border-radius: 50%;
+      background: #ffffff; border: 1.5px solid #bbf7d0; color: #15803d;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; line-height: 1; cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      transition: background 0.15s;
+    }
+    .sb-toggle:hover { background: #f0fdf4; }
 
     .sb-logo {
-      padding: 22px 20px 18px;
-      border-bottom: 1px solid rgba(226,232,240,0.7);
-      display: flex; align-items: center; gap: 12px;
+      padding: ${collapsed ? '26px 0 20px' : '26px 22px 20px'};
+      border-bottom: 1px solid #e5e7eb;
+      text-align: ${collapsed ? 'center' : 'left'};
     }
-    .sb-icon {
-      width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
-      background: linear-gradient(135deg, #3b82f6, #0ea5e9);
-      display: flex; align-items: center; justify-content: center;
-    }
-    .sb-title { font-family: 'DM Serif Display', serif; font-size: 16px; color: #f5f5f5ff; }
-    .sb-sub   { font-size: 11px; color: #94a3b8; margin-top: 1px; }
+    .sb-title { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 20px; color: #166534; letter-spacing: -0.01em; }
+    .sb-sub   { font-size: 11px; color: #16a34a; margin-top: 3px; letter-spacing: 0.02em; }
 
-    .nav { flex: 1; padding: 14px 12px; display: flex; flex-direction: column; gap: 3px; overflow-y: auto; }
+    .nav { flex: 1; padding: 16px ${collapsed ? '10px' : '12px'}; display: flex; flex-direction: column; gap: 3px; overflow-y: auto; overflow-x: hidden; }
     .nav-sec {
-      font-size: 10px; font-weight: 700; color: #cbd5e1;
-      letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 8px 5px;
+      font-size: 10px; font-weight: 700; color: #4d7c0f;
+      letter-spacing: 0.1em; text-transform: uppercase; padding: 10px 10px 6px;
+      white-space: nowrap; overflow: hidden;
     }
     .ni {
-      display: flex; align-items: center; gap: 10px;
-      padding: 9px 12px; border-radius: 12px;
-      font-size: 13px; font-weight: 500; color: #64748b;
+      display: flex; align-items: center; gap: 9px;
+      padding: 11px 14px; border-radius: 12px;
+      font-size: 14px; font-weight: 500; color: #15803d;
       text-decoration: none; transition: all 0.15s;
+      white-space: nowrap; overflow: hidden;
+      justify-content: ${collapsed ? 'center' : 'flex-start'};
     }
-    .ni:hover { background: rgba(59,130,246,0.07); color: #3b82f6; }
-    .ni.on    { background: rgba(59,130,246,0.10); color: #2563eb; font-weight: 700; }
-    .ni-ic {
-      width: 32px; height: 32px; border-radius: 9px; flex-shrink: 0;
+    .ni svg { flex-shrink: 0; }
+    .ni:hover { background: #f0fdf4; color: #14532d; }
+    .ni.on    { background: #dcfce7; color: #14532d; font-weight: 700; }
+    .ni-wrap { position: relative; }
+    .ni-indicator {
+      position: absolute; top: 4px; bottom: 4px;
+      right: -${collapsed ? '10' : '12'}px;
+      width: 4px; background: #22c55e; border-radius: 4px 0 0 4px;
+    }
+    .ni-avatar {
+      width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0;
+      background: #dcfce7; color: #15803d; font-weight: 700; font-size: 13px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 15px; background: rgba(241,245,249,0.9);
-      transition: background 0.15s;
-    }
-    .ni:hover .ni-ic { background: rgba(59,130,246,0.10); }
-    .ni.on    .ni-ic  { background: rgba(59,130,246,0.14); }
-    .ni-dot {
-      margin-left: auto; width: 7px; height: 7px; border-radius: 50%;
-      background: #3b82f6; flex-shrink: 0;
     }
 
-    .sb-foot { padding: 14px; border-top: 1px solid rgba(226,232,240,0.7); }
+    .sb-foot { padding: 14px; border-top: 1px solid #e5e7eb; }
     .uc {
-      background: rgba(248,250,252,0.9); border: 1px solid rgba(226,232,240,0.7);
-      border-radius: 14px; padding: 11px 12px;
-      display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+      background: #ffffff; border: 1px solid #e5e7eb;
+      border-radius: 10px; padding: 8px 8px 8px 10px;
+      display: flex; align-items: center; gap: 8px; justify-content: space-between;
     }
-    .ua {
-      width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
-      background: linear-gradient(135deg, #3b82f6, #0ea5e9);
+    .ue { font-size: 11px; color: #14532d; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ur { font-size: 10px; color: #6b7280; margin-top: 1px; text-transform: capitalize; }
+    .lout-icon {
+      flex-shrink: 0; width: 28px; height: 28px; border-radius: 8px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 14px; font-weight: 700; color: white;
+      background: #fef2f2; border: 1px solid #fecaca; color: #dc2626;
+      cursor: pointer; transition: background 0.15s;
     }
-    .ue { font-size: 12px; color: #1e293b; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .ur { font-size: 11px; color: #5e656eff; margin-top: 1px; }
-    .lout {
-      width: 100%; padding: 9px 12px; border-radius: 11px; cursor: pointer;
-      background: rgba(239,68,68,0.07); border: 1px solid rgba(239,68,68,0.15);
-      color: #dc2626; font-family: 'Sarabun', sans-serif;
-      font-size: 13px; font-weight: 600;
-      display: flex; align-items: center; justify-content: center; gap: 7px;
-      transition: background 0.15s;
-    }
-    .lout:hover { background: rgba(239,68,68,0.13); }
+    .lout-icon:hover { background: #fee2e2; }
 
     /* ── MAIN ── */
     .main-wrap {
       flex: 1; overflow-y: auto;
       position: relative; z-index: 1;
+      background: #ffffff;
     }
     .main-inner { padding: 32px 36px; }
   `;
@@ -191,47 +203,49 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
   return (
     <>
       <style>{css}</style>
-      <div className="blob b1" />
-      <div className="blob b2" />
 
       <div className="layout">
         {/* SIDEBAR */}
         <aside className="sidebar">
+          <button className="sb-toggle" onClick={toggleCollapsed} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+            {collapsed ? '›' : '‹'}
+          </button>
+
           <div className="sb-logo">
-            <div className="sb-icon">🏥</div>
-            <div>
-              <div className="sb-title">Care Hub</div>
-              <div className="sb-sub">ระบบดูแลผู้สูงอายุ</div>
-            </div>
+            <div className="sb-title">{collapsed ? 'CH' : 'Care Hub'}</div>
+            {!collapsed && <div className="sb-sub">Elderly Care System</div>}
           </div>
 
           <nav className="nav">
-            <div className="nav-sec">เมนูหลัก</div>
+            {!collapsed && <div className="nav-sec">Main Menu</div>}
             {navItems.map(item => (
-              <Link key={item.href + item.label} href={item.href} className={`ni${item.active ? ' on' : ''}`}>
-                <span className="ni-ic">{item.icon}</span>
-                {item.label}
-                {item.active && <span className="ni-dot" />}
-              </Link>
+              <div key={item.href + item.label} className="ni-wrap">
+                <Link href={item.href} className={`ni${item.active ? ' on' : ''}`} title={collapsed ? item.label : undefined}>
+                  {collapsed
+                    ? <span className="ni-avatar">{initial(item.label)}</span>
+                    : <>{item.Icon && <item.Icon size={16} strokeWidth={1.9} />}{item.label}</>}
+                </Link>
+                {item.active && <span className="ni-indicator" />}
+              </div>
             ))}
           </nav>
 
           <div className="sb-foot">
-            <div className="uc">
-              <div className="ua">{user?.email ? user.email[0].toUpperCase() : 'U'}</div>
-              <div style={{minWidth: 0}}>
-                <div className="ue">{user?.email || 'ผู้ใช้งาน'}</div>
-                <div className="ur">{roleLabel[user?.role || ''] || user?.role || '-'}</div>
+            {collapsed ? (
+              <button className="lout-icon" onClick={handleLogout} title="Log out" style={{ margin: '0 auto', display: 'flex' }}>
+                <LogOut size={15} strokeWidth={1.8} />
+              </button>
+            ) : (
+              <div className="uc">
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div className="ue">{user?.email || 'User'}</div>
+                  <div className="ur">{roleLabel[user?.role || ''] || user?.role || '-'}</div>
+                </div>
+                <button className="lout-icon" onClick={handleLogout} title="Log out">
+                  <LogOut size={15} strokeWidth={1.8} />
+                </button>
               </div>
-            </div>
-            <button className="lout" onClick={handleLogout}>
-              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                <polyline points="16 17 21 12 16 7"/>
-                <line x1="21" y1="12" x2="9" y2="12"/>
-              </svg>
-              ออกจากระบบ
-            </button>
+            )}
           </div>
         </aside>
 

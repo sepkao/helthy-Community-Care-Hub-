@@ -33,21 +33,14 @@ dashboard.get('/stats', async (c) => {
             totalElderlyQuery += ' JOIN guardians ON elderly.id = guardians.elderly_id WHERE guardians.user_id = ?';
         }
 
-        // 2. Urgent Cases (latest risk = high/critical)
-        let urgentQuery = `
-            SELECT COUNT(*) as count 
-            FROM elderly e
-            JOIN risk_records r1 ON e.id = r1.elderly_id
-            WHERE r1.recorded_at = (
-                SELECT MAX(recorded_at) 
-                FROM risk_records r2 
-                WHERE r2.elderly_id = e.id
-            )
-            AND r1.risk_level IN ('high', 'critical')
+        // 2. Recipients with chronic diseases (มีโรคประจำตัวอย่างน้อย 1 โรค)
+        let diseasedQuery = `
+            SELECT COUNT(DISTINCT ed.elderly_id) as count
+            FROM elderly_diseases ed
         `;
 
         if (isGuardian) {
-            urgentQuery += ' AND e.id IN (SELECT elderly_id FROM guardians WHERE user_id = ?)';
+            diseasedQuery += ' WHERE ed.elderly_id IN (SELECT elderly_id FROM guardians WHERE user_id = ?)';
         }
 
         // 3. Today's Visits
@@ -67,12 +60,12 @@ dashboard.get('/stats', async (c) => {
 
         // Execute queries
         const totalParams = isGuardian ? [userId] : [];
-        const urgentParams = isGuardian ? [userId] : [];
+        const diseasedParams = isGuardian ? [userId] : [];
         const visitParams = isGuardian ? [userId] : [];
 
-        const [totalResult, urgentResult, visitResult] = await Promise.all([
+        const [totalResult, diseasedResult, visitResult] = await Promise.all([
             c.env.carehub_db.prepare(totalElderlyQuery).bind(...totalParams).first<{ count: number }>(),
-            c.env.carehub_db.prepare(urgentQuery).bind(...urgentParams).first<{ count: number }>(),
+            c.env.carehub_db.prepare(diseasedQuery).bind(...diseasedParams).first<{ count: number }>(),
             c.env.carehub_db.prepare(visitQuery).bind(...visitParams).first<{ count: number }>()
         ]);
 
@@ -80,7 +73,7 @@ dashboard.get('/stats', async (c) => {
             success: true,
             data: {
                 total_elderly: totalResult?.count || 0,
-                urgent_elderly: urgentResult?.count || 0,
+                diseased_elderly: diseasedResult?.count || 0,
                 today_visits: visitResult?.count || 0
             }
         });

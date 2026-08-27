@@ -8,7 +8,19 @@ CREATE TABLE users (
 CREATE TABLE elderly (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   full_name TEXT NOT NULL,
+  photo TEXT,
+  age INTEGER,
+  national_id TEXT,
+  date_of_birth TEXT,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE elderly_diseases (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  elderly_id INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  note TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (elderly_id) REFERENCES elderly(id)
 );
 CREATE TABLE guardians (
   user_id INTEGER NOT NULL,

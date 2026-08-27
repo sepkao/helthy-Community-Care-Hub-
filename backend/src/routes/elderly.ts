@@ -27,7 +27,38 @@ elderly.use('/*', async (c, next) => {
 interface Elderly {
     id: number;
     full_name: string;
+    photo: string | null;
+    age: number | null;
+    national_id: string | null;
+    date_of_birth: string | null;
     created_at: string;
+}
+
+/**
+ * คำนวณอายุปัจจุบันจากวันเกิด (YYYY-MM-DD) — คิดวันเกิดที่ยังไม่ถึงในปีนี้ด้วย
+ */
+function calculateAge(dob: string): number | null {
+    const birth = new Date(dob);
+    if (Number.isNaN(birth.getTime())) return null;
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+        age--;
+    }
+    return age;
+}
+
+/**
+ * เติม/แทนที่ฟิลด์ age ด้วยค่าที่คำนวณจาก date_of_birth (ถ้ามี) —
+ * ใช้กับทั้ง list และ detail เพื่อให้อายุอัปเดตตามวันปัจจุบันเสมอ
+ */
+function withComputedAge<T extends { age: number | null; date_of_birth?: string | null }>(row: T): T {
+    if (row.date_of_birth) {
+        const computed = calculateAge(row.date_of_birth);
+        if (computed !== null) row.age = computed;
+    }
+    return row;
 }
 
 /**
@@ -38,13 +69,10 @@ elderly.get('/', async (c) => {
     try {
         const user = c.get('user');
         const search = c.req.query('search') || '';
-        const riskFilter = c.req.query('risk_level') || '';
+        const diseaseFilter = c.req.query('disease') || '';
 
         let query = `
-            SELECT e.id, e.full_name, e.created_at,
-                (SELECT r.risk_level FROM risk_records r 
-                 WHERE r.elderly_id = e.id 
-                 ORDER BY r.recorded_at DESC LIMIT 1) as risk_level
+            SELECT e.id, e.full_name, e.photo, e.age, e.national_id, e.date_of_birth, e.created_at
             FROM elderly e
         `;
         const params: string[] = [];
@@ -57,9 +85,16 @@ elderly.get('/', async (c) => {
             params.push(String(user.userId));
         }
 
+        // ค้นหาได้ทั้งชื่อ-นามสกุล และชื่อโรค
         if (search) {
-            conditions.push('e.full_name LIKE ?');
-            params.push(`%${search}%`);
+            conditions.push('(e.full_name LIKE ? OR EXISTS (SELECT 1 FROM elderly_diseases d WHERE d.elderly_id = e.id AND d.name LIKE ?))');
+            params.push(`%${search}%`, `%${search}%`);
+        }
+
+        // กรองตามหมวดโรค (ชื่อโรค)
+        if (diseaseFilter) {
+            conditions.push('EXISTS (SELECT 1 FROM elderly_diseases d WHERE d.elderly_id = e.id AND d.name = ?)');
+            params.push(diseaseFilter);
         }
 
         if (conditions.length > 0) {
@@ -73,19 +108,61 @@ elderly.get('/', async (c) => {
             ? await stmt.bind(...params).all()
             : await stmt.all();
 
-        // Filter by risk_level in JS (since it's a subquery alias)
-        let data = result.results;
-        if (riskFilter) {
-            data = data.filter((e: any) => e.risk_level === riskFilter);
+        const list = (result.results as any[]).map(withComputedAge);
+
+        // แนบรายการโรคของแต่ละคน
+        if (list.length > 0) {
+            const ids = list.map((e) => e.id);
+            const placeholders = ids.map(() => '?').join(',');
+            const dRes = await c.env.carehub_db
+                .prepare(`SELECT id, elderly_id, name, note FROM elderly_diseases WHERE elderly_id IN (${placeholders}) ORDER BY created_at ASC`)
+                .bind(...ids)
+                .all();
+            const byId: Record<number, any[]> = {};
+            for (const d of dRes.results as any[]) {
+                (byId[d.elderly_id] ||= []).push(d);
+            }
+            for (const e of list) e.diseases = byId[e.id] || [];
         }
 
         return c.json({
             success: true,
-            data,
-            total: data.length,
+            data: list,
+            total: list.length,
         });
     } catch (error) {
         console.error('Get elderly list error:', error);
+        return c.json({ success: false, message: 'เกิดข้อผิดพลาด' }, 500);
+    }
+});
+
+/**
+ * GET /elderly/categories
+ * ดึงรายชื่อหมวดโรคทั้งหมด (distinct) สำหรับทำ filter
+ * ต้องมาก่อน /:id ไม่งั้นจะถูกจับเป็น id
+ */
+elderly.get('/categories', async (c) => {
+    try {
+        const user = c.get('user');
+        let query = 'SELECT DISTINCT d.name FROM elderly_diseases d';
+        const params: string[] = [];
+
+        if (user.role === 'guardian') {
+            query += ' JOIN guardians g ON d.elderly_id = g.elderly_id WHERE g.user_id = ?';
+            params.push(String(user.userId));
+        }
+
+        query += ' ORDER BY d.name ASC';
+
+        const stmt = c.env.carehub_db.prepare(query);
+        const res = params.length > 0 ? await stmt.bind(...params).all() : await stmt.all();
+
+        return c.json({
+            success: true,
+            data: (res.results as any[]).map((r) => r.name),
+        });
+    } catch (error) {
+        console.error('Get disease categories error:', error);
         return c.json({ success: false, message: 'เกิดข้อผิดพลาด' }, 500);
     }
 });
@@ -112,14 +189,22 @@ elderly.get('/:id', async (c) => {
         }
 
         // ดึงข้อมูลผู้สูงอายุ
-        const elderlyData = await c.env.carehub_db
-            .prepare('SELECT id, full_name, created_at FROM elderly WHERE id = ?')
+        const elderlyDataRaw = await c.env.carehub_db
+            .prepare('SELECT id, full_name, photo, age, national_id, date_of_birth, created_at FROM elderly WHERE id = ?')
             .bind(id)
             .first<Elderly>();
 
-        if (!elderlyData) {
+        if (!elderlyDataRaw) {
             return c.json({ success: false, message: 'ไม่พบข้อมูล' }, 404);
         }
+
+        const elderlyData = withComputedAge(elderlyDataRaw);
+
+        // ดึงรายการโรคประจำตัวทั้งหมด
+        const diseases = await c.env.carehub_db
+            .prepare('SELECT id, name, note, created_at FROM elderly_diseases WHERE elderly_id = ? ORDER BY created_at ASC')
+            .bind(id)
+            .all();
 
         // ดึง risk record ล่าสุด
         const latestRisk = await c.env.carehub_db
@@ -149,6 +234,7 @@ elderly.get('/:id', async (c) => {
             success: true,
             data: {
                 ...elderlyData,
+                diseases: diseases.results,
                 latest_risk: latestRisk || null,
                 recent_visits: recentVisits.results,
             },
@@ -166,20 +252,53 @@ elderly.get('/:id', async (c) => {
 elderly.post('/', async (c) => {
     try {
         const user = c.get('user');
-        const { full_name, risk_level, symptoms, guardian_id } = await c.req.json();
+        const { full_name, risk_level, symptoms, guardian_id, photo, diseases, date_of_birth, national_id } = await c.req.json();
 
         if (!full_name || full_name.trim().length === 0) {
             return c.json({ success: false, message: 'กรุณากรอกชื่อ-นามสกุล' }, 400);
         }
 
-        if (!risk_level) {
-            return c.json({ success: false, message: 'กรุณาระบุระดับความเสี่ยง' }, 400);
+        // วันเกิด — บังคับกรอก และต้องเป็นวันที่ที่สมเหตุสมผล (ไม่ใช่อนาคต, อายุ 0-120 ปี)
+        const dob = String(date_of_birth ?? '').trim();
+        if (!dob) {
+            return c.json({ success: false, message: 'กรุณากรอกวันเกิด' }, 400);
+        }
+        const dobDate = new Date(dob);
+        if (Number.isNaN(dobDate.getTime()) || dobDate > new Date()) {
+            return c.json({ success: false, message: 'วันเกิดไม่ถูกต้อง' }, 400);
+        }
+        const ageNum = calculateAge(dob);
+        if (ageNum === null || ageNum < 0 || ageNum > 120) {
+            return c.json({ success: false, message: 'วันเกิดไม่ถูกต้อง (อายุต้องอยู่ระหว่าง 0-120 ปี)' }, 400);
         }
 
-        // 1. Insert Elderly
+        // เลขบัตรประชาชน — บังคับกรอก 13 หลัก
+        const nid = String(national_id ?? '').replace(/\D/g, '');
+        if (!nid) {
+            return c.json({ success: false, message: 'กรุณากรอกเลขบัตรประชาชน' }, 400);
+        }
+        if (nid.length !== 13) {
+            return c.json({ success: false, message: 'เลขบัตรประชาชนต้องมี 13 หลัก' }, 400);
+        }
+
+        // กันเลขบัตรซ้ำ
+        const dup = await c.env.carehub_db
+            .prepare('SELECT id FROM elderly WHERE national_id = ?')
+            .bind(nid)
+            .first();
+        if (dup) {
+            return c.json({ success: false, message: 'เลขบัตรประชาชนนี้มีอยู่ในระบบแล้ว' }, 400);
+        }
+
+        // ตรวจขนาดรูป (base64 data URI) — กันแถวใน D1 ใหญ่เกินไป (~1.5MB)
+        if (photo && typeof photo === 'string' && photo.length > 2_000_000) {
+            return c.json({ success: false, message: 'รูปภาพมีขนาดใหญ่เกินไป (จำกัดประมาณ 1.5MB)' }, 400);
+        }
+
+        // 1. Insert Elderly (พร้อมรูปถ้ามี) — เก็บทั้ง date_of_birth (แหล่งข้อมูลจริง) และ age (คำนวณตอนบันทึก เผื่อความเข้ากันได้ย้อนหลัง)
         const result = await c.env.carehub_db
-            .prepare('INSERT INTO elderly (full_name) VALUES (?)')
-            .bind(full_name.trim())
+            .prepare('INSERT INTO elderly (full_name, photo, age, national_id, date_of_birth) VALUES (?, ?, ?, ?, ?)')
+            .bind(full_name.trim(), photo || null, ageNum, nid, dob)
             .run();
 
         if (!result.success) {
@@ -188,14 +307,30 @@ elderly.post('/', async (c) => {
 
         const elderlyId = result.meta.last_row_id;
 
-        // 2. Insert Risk Record
-        await c.env.carehub_db
-            .prepare(`
+        // 2. Insert Risk Record (เฉพาะเมื่อส่ง risk_level มา — ตอนนี้ไม่บังคับแล้ว)
+        if (risk_level) {
+            await c.env.carehub_db
+                .prepare(`
         INSERT INTO risk_records (elderly_id, caregiver_id, risk_level, symptoms)
         VALUES (?, ?, ?, ?)
       `)
-            .bind(elderlyId, user.userId, risk_level, symptoms || '')
-            .run();
+                .bind(elderlyId, user.userId, risk_level, symptoms || '')
+                .run();
+        }
+
+        // 2.5 Insert Diseases (โรคประจำตัว) — รับได้ทั้ง string หรือ { name, note }
+        if (Array.isArray(diseases)) {
+            for (const d of diseases) {
+                const name = typeof d === 'string' ? d : d?.name;
+                const note = typeof d === 'string' ? null : (d?.note ?? null);
+                if (name && String(name).trim().length > 0) {
+                    await c.env.carehub_db
+                        .prepare('INSERT INTO elderly_diseases (elderly_id, name, note) VALUES (?, ?, ?)')
+                        .bind(elderlyId, String(name).trim(), note)
+                        .run();
+                }
+            }
+        }
 
         // 3. Link Guardian
         // ถ้าคนสร้างเป็น guardian ให้ผูกตัวเอง
@@ -215,7 +350,7 @@ elderly.post('/', async (c) => {
 
         // Fetch newly created data
         const newElderly = await c.env.carehub_db
-            .prepare('SELECT id, full_name, created_at FROM elderly WHERE rowid = ?')
+            .prepare('SELECT id, full_name, photo, age, national_id, date_of_birth, created_at FROM elderly WHERE rowid = ?')
             .bind(elderlyId)
             .first<Elderly>();
 
@@ -262,6 +397,10 @@ elderly.delete('/:id', async (c) => {
 
         await c.env.carehub_db
             .prepare('DELETE FROM risk_records WHERE elderly_id = ?')
+            .bind(id).run();
+
+        await c.env.carehub_db
+            .prepare('DELETE FROM elderly_diseases WHERE elderly_id = ?')
             .bind(id).run();
 
         await c.env.carehub_db

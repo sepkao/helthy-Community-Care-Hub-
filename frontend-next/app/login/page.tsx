@@ -27,11 +27,11 @@ function NetworkBackground() {
         <line key={i}
           x1={nodes[a][0]} y1={nodes[a][1]}
           x2={nodes[b][0]} y2={nodes[b][1]}
-          stroke="#3b82f6" strokeWidth="1"
+          stroke="#16a34a" strokeWidth="1"
         />
       ))}
       {nodes.map(([cx, cy], i) => (
-        <circle key={i} cx={cx} cy={cy} r={i === 0 ? 5 : 3} fill="#3b82f6" />
+        <circle key={i} cx={cx} cy={cy} r={i === 0 ? 5 : 3} fill="#16a34a" />
       ))}
     </svg>
   )
@@ -118,7 +118,7 @@ export default function LoginPage() {
           font-family: 'Sarabun', sans-serif;
           min-height: 100vh;  
           width: 100%;
-          background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 50%, #ecfeff 100%);
+          background: #f0fdf4;
           display: flex; align-items: center; justify-content: center;
           padding: 24px; position: relative; overflow: hidden;
         }
@@ -129,11 +129,11 @@ export default function LoginPage() {
         }
         .blob-1 {
           width: 500px; height: 500px; top: -120px; left: -120px;
-          background: radial-gradient(circle, rgba(59,130,246,0.13) 0%, transparent 70%);
+          background: radial-gradient(circle, rgba(22,163,74,0.13) 0%, transparent 70%);
         }
         .blob-2 {
           width: 400px; height: 400px; bottom: -80px; right: -80px;
-          background: radial-gradient(circle, rgba(6,182,212,0.11) 0%, transparent 70%);
+          background: radial-gradient(circle, rgba(34,197,94,0.11) 0%, transparent 70%);
         }
 
 
@@ -147,7 +147,7 @@ export default function LoginPage() {
           border: 1.5px solid rgba(255,255,255,0.75);
           border-radius: 28px;
           padding: 40px 36px 36px;
-          box-shadow: 0 24px 64px rgba(59,130,246,0.13), 0 2px 0 rgba(255,255,255,0.9) inset;
+          box-shadow: 0 24px 64px rgba(22,163,74,0.13), 0 2px 0 rgba(255,255,255,0.9) inset;
           animation: fadeUp 0.7s ease both;
         }
 
@@ -155,9 +155,9 @@ export default function LoginPage() {
         .card-header { text-align: center; margin-bottom: 28px; }
         .card-icon-wrap {
           width: 56px; height: 56px; border-radius: 16px; margin: 0 auto 14px;
-          background: linear-gradient(135deg, #3b82f6, #0ea5e9);
+          background: #16a34a;
           display: flex; align-items: center; justify-content: center;
-          box-shadow: 0 8px 24px rgba(59,130,246,0.35);
+          box-shadow: 0 8px 24px rgba(22,163,74,0.35);
         }
         .card-title {
           font-family: 'DM Serif Display', serif;
@@ -194,8 +194,8 @@ export default function LoginPage() {
         }
         .field-input::placeholder { color: #cbd5e1; }
         .field-input:focus {
-          border-color: #3b82f6;
-          box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+          border-color: #16a34a;
+          box-shadow: 0 0 0 3px rgba(22,163,74,0.12);
           background: white;
         }
         .field-input.has-toggle { padding-right: 48px; }
@@ -205,23 +205,23 @@ export default function LoginPage() {
           padding: 0; display: flex; align-items: center;
           transition: color 0.15s;
         }
-        .toggle-pw:hover { color: #3b82f6; }
+        .toggle-pw:hover { color: #16a34a; }
 
         /* Submit */
         .submit-btn {
           width: 100%; padding: 13px;
-          background: linear-gradient(135deg, #3b82f6, #0ea5e9);
+          background: #16a34a;
           color: white; font-family: 'Sarabun', sans-serif;
           font-size: 15px; font-weight: 700;
           border: none; border-radius: 14px; cursor: pointer;
-          box-shadow: 0 6px 20px rgba(59,130,246,0.35);
+          box-shadow: 0 6px 20px rgba(22,163,74,0.35);
           transition: transform 0.18s, box-shadow 0.18s, opacity 0.18s;
           margin-top: 8px;
           display: flex; align-items: center; justify-content: center; gap: 8px;
         }
         .submit-btn:hover:not(:disabled) {
           transform: translateY(-1px);
-          box-shadow: 0 10px 28px rgba(59,130,246,0.45);
+          box-shadow: 0 10px 28px rgba(22,163,74,0.45);
         }
         .submit-btn:disabled { opacity: 0.55; cursor: not-allowed; }
 
@@ -239,7 +239,7 @@ export default function LoginPage() {
           font-size: 13px; color: #94a3b8;
         }
         .card-footer a {
-          color: #3b82f6; font-weight: 600; text-decoration: none;
+          color: #16a34a; font-weight: 600; text-decoration: none;
           transition: color 0.15s;
         }
         .card-footer a:hover { color: #1d4ed8; text-decoration: underline; }
@@ -252,7 +252,7 @@ export default function LoginPage() {
           font-size: 14px; color: #64748b; letter-spacing: 0.01em;
         }
         .brand-dot {
-          width: 6px; height: 6px; border-radius: 50%; background: #3b82f6;
+          width: 6px; height: 6px; border-radius: 50%; background: #16a34a;
         }
 
         @keyframes fadeUp {
@@ -264,6 +264,17 @@ export default function LoginPage() {
           100% { width: 800px; height: 800px; opacity: 0; }
         }
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        .back-link {
+          position: absolute; top: 20px; left: 20px; z-index: 20;
+          display: inline-flex; align-items: center; gap: 6px;
+          padding: 8px 14px; border-radius: 10px;
+          background: rgba(255,255,255,0.8); border: 1px solid rgba(255,255,255,0.7);
+          color: #15803d; font-family: 'Sarabun', sans-serif;
+          font-size: 13px; font-weight: 600; text-decoration: none;
+          transition: background 0.15s, transform 0.15s;
+        }
+        .back-link:hover { background: rgba(255,255,255,0.95); transform: translateX(-2px); }
       `}</style>
 
       <div className="login-root">
@@ -273,6 +284,8 @@ export default function LoginPage() {
         <NetworkBackground />
         <div className="pulse-wrap">
         </div>
+
+        <Link href="/" className="back-link">← กลับหน้าแรก</Link>
 
         {/* Card */}
         <TiltCard>

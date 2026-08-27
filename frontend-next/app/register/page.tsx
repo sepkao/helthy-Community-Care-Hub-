@@ -21,10 +21,10 @@ function NetworkBackground() {
       transition: 'transform 0.4s ease',
     }}>
       {edges.map(([a, b], i) => (
-        <line key={i} x1={nodes[a][0]} y1={nodes[a][1]} x2={nodes[b][0]} y2={nodes[b][1]} stroke="#3b82f6" strokeWidth="1" />
+        <line key={i} x1={nodes[a][0]} y1={nodes[a][1]} x2={nodes[b][0]} y2={nodes[b][1]} stroke="#16a34a" strokeWidth="1" />
       ))}
       {nodes.map(([cx, cy], i) => (
-        <circle key={i} cx={cx} cy={cy} r={i === 0 ? 5 : 3} fill="#3b82f6" />
+        <circle key={i} cx={cx} cy={cy} r={i === 0 ? 5 : 3} fill="#16a34a" />
       ))}
     </svg>
   )
@@ -111,15 +111,15 @@ export default function RegisterPage() {
 
     .pg {
       min-height: 100vh;
-      background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 50%, #ecfeff 100%);
+      background: #f0fdf4;
       display: flex; align-items: center; justify-content: center;
       padding: 24px; position: relative; overflow: hidden;
     }
     .blob { position: fixed; border-radius: 50%; pointer-events: none; z-index: 0; }
     .b1 { width: 480px; height: 480px; top: -120px; left: -100px;
-          background: radial-gradient(circle, rgba(59,130,246,0.13) 0%, transparent 70%); }
+          background: radial-gradient(circle, rgba(22,163,74,0.13) 0%, transparent 70%); }
     .b2 { width: 380px; height: 380px; bottom: -80px; right: -60px;
-          background: radial-gradient(circle, rgba(6,182,212,0.11) 0%, transparent 70%); }
+          background: radial-gradient(circle, rgba(34,197,94,0.11) 0%, transparent 70%); }
 
     }
     .r2 { animation-delay: 1.5s; }
@@ -138,7 +138,7 @@ export default function RegisterPage() {
       border: 1.5px solid rgba(255,255,255,0.8);
       border-radius: 28px;
       padding: 36px 36px 32px;
-      box-shadow: 0 24px 64px rgba(59,130,246,0.13), 0 2px 0 rgba(255,255,255,0.9) inset;
+      box-shadow: 0 24px 64px rgba(22,163,74,0.13), 0 2px 0 rgba(255,255,255,0.9) inset;
       transform-style: preserve-3d;
       transition: transform 0.2s ease;
     }
@@ -146,14 +146,14 @@ export default function RegisterPage() {
     .brand { display: flex; align-items: center; justify-content: center; gap: 8px;
              margin-bottom: 24px; font-family: 'DM Serif Display', serif;
              font-size: 13px; color: #64748b; }
-    .bdot  { width: 6px; height: 6px; border-radius: 50%; background: #3b82f6; }
+    .bdot  { width: 6px; height: 6px; border-radius: 50%; background: #16a34a; }
 
     .hd { text-align: center; margin-bottom: 24px; }
     .ic {
       width: 56px; height: 56px; border-radius: 16px; margin: 0 auto 14px;
-      background: linear-gradient(135deg, #10b981, #0ea5e9);
+      background: #16a34a;
       display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 8px 24px rgba(16,185,129,0.3);
+      box-shadow: 0 8px 24px rgba(22,163,74,0.3);
     }
     .ttl { font-family: 'DM Serif Display', serif; font-size: 26px; color: #1e293b; letter-spacing: -0.02em; }
     .sub { font-size: 13px; color: #94a3b8; margin-top: 4px; }
@@ -163,7 +163,7 @@ export default function RegisterPage() {
       display: flex; align-items: center; gap: 8px; margin-bottom: 16px;
     }
     .alert-err { background: rgba(239,68,68,0.07); border: 1px solid rgba(239,68,68,0.2); color: #dc2626; }
-    .alert-ok  { background: rgba(16,185,129,0.07); border: 1px solid rgba(16,185,129,0.25); color: #059669; }
+    .alert-ok  { background: rgba(22,163,74,0.07); border: 1px solid rgba(22,163,74,0.25); color: #15803d; }
 
     .fld { margin-bottom: 14px; }
     .lbl { display: block; font-size: 11px; font-weight: 700; color: #94a3b8;
@@ -177,7 +177,7 @@ export default function RegisterPage() {
       transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
     }
     .inp::placeholder { color: #cbd5e1; }
-    .inp:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.12); background: white; }
+    .inp:focus { border-color: #16a34a; box-shadow: 0 0 0 3px rgba(22,163,74,0.12); background: white; }
     .inp.pw { padding-right: 46px; }
     .inp.err { border-color: rgba(239,68,68,0.5); background: rgba(239,68,68,0.03); }
     .inp.err:focus { border-color: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,0.1); }
@@ -188,7 +188,7 @@ export default function RegisterPage() {
       background: none; border: none; cursor: pointer; color: #cbd5e1;
       padding: 0; display: flex; align-items: center; transition: color 0.15s;
     }
-    .eye:hover { color: #3b82f6; }
+    .eye:hover { color: #16a34a; }
 
     /* strength bar */
     .strength-wrap { margin-top: 6px; display: flex; gap: 4px; }
@@ -199,14 +199,14 @@ export default function RegisterPage() {
 
     .btn {
       width: 100%; padding: 13px; margin-top: 6px;
-      background: linear-gradient(135deg, #10b981, #0ea5e9);
+      background: #16a34a;
       color: white; font-family: 'Sarabun', sans-serif; font-size: 15px; font-weight: 700;
       border: none; border-radius: 14px; cursor: pointer;
-      box-shadow: 0 6px 20px rgba(16,185,129,0.3);
+      box-shadow: 0 6px 20px rgba(22,163,74,0.3);
       display: flex; align-items: center; justify-content: center; gap: 8px;
       transition: transform 0.18s, box-shadow 0.18s, opacity 0.18s;
     }
-    .btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 10px 28px rgba(16,185,129,0.4); }
+    .btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 10px 28px rgba(22,163,74,0.4); }
     .btn:disabled { opacity: 0.55; cursor: not-allowed; }
 
     .spin {
@@ -216,12 +216,23 @@ export default function RegisterPage() {
     }
 
     .ft { text-align: center; margin-top: 20px; font-size: 13px; color: #94a3b8; }
-    .ft a { color: #3b82f6; font-weight: 600; text-decoration: none; }
+    .ft a { color: #16a34a; font-weight: 600; text-decoration: none; }
     .ft a:hover { text-decoration: underline; }
 
     @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes ripple { 0% { width: 80px; height: 80px; opacity: 0.45; } 100% { width: 560px; height: 560px; opacity: 0; } }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    .back-link {
+      position: absolute; top: 20px; left: 20px; z-index: 20;
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 14px; border-radius: 10px;
+      background: rgba(255,255,255,0.8); border: 1px solid rgba(255,255,255,0.7);
+      color: #15803d; font-family: 'Sarabun', sans-serif;
+      font-size: 13px; font-weight: 600; text-decoration: none;
+      transition: background 0.15s, transform 0.15s;
+    }
+    .back-link:hover { background: rgba(255,255,255,0.95); transform: translateX(-2px); }
   `
 
   // password strength
@@ -232,7 +243,7 @@ export default function RegisterPage() {
     return 3
   }
   const strength = getStrength(password)
-  const strengthColors = ['#e2e8f0', '#ef4444', '#f59e0b', '#10b981']
+  const strengthColors = ['#e2e8f0', '#ef4444', '#f59e0b', '#16a34a']
   const strengthLabels = ['', 'อ่อนมาก', 'พอใช้', 'ดี']
 
   return (
@@ -242,6 +253,8 @@ export default function RegisterPage() {
         <div className="blob b1" />
         <div className="blob b2" />
         <NetworkBackground />
+
+        <Link href="/login" className="back-link">← กลับไปเข้าสู่ระบบ</Link>
         <div className="rings">
           <div className="ring" /><div className="ring r2" /><div className="ring r3" />
         </div>
